@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv health-visualizer-v1.1.2/module.json .)",
+      "Bash(mv health-visualizer-v1.1.2/scripts .)",
+      "Bash(rmdir health-visualizer-v1.1.2)",
+      "Bash(where gh:*)",
+      "Bash(winget list:*)",
+      "Bash(winget install:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)",
+      "Bash(cmd.exe /c \"gh auth status 2>&1\")",
+      "Bash(powershell.exe -Command \"gh auth status\")",
+      "Bash(cmd.exe /c \"gh auth status\")",
+      "Bash(powershell.exe -Command \"gh auth status; Write-Host ''exit:'' $LASTEXITCODE\")",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' auth status 2>&1\")",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(powershell.exe -Command \"Compress-Archive -Path module.json, scripts -DestinationPath agnostic-token-damage-effects-v0.2.zip -Force\")",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.2 agnostic-token-damage-effects-v0.2.zip --title ''v0.2'' --notes ''## Changes:*)",
+      "Bash(powershell.exe -Command \"Compress-Archive -Path module.json, scripts -DestinationPath agnostic-token-damage-effects-v0.3.zip -Force\")",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.3 agnostic-token-damage-effects-v0.3.zip --title ''v0.3'' --notes ''## Changes:*)"
+    ]
+  }
+}
