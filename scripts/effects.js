@@ -36,7 +36,7 @@ function tint(color, factor = 1) {
 // Bleeding overlay — teardrop drops falling vertically top-to-bottom
 // ---------------------------------------------------------------------------
 
-function spawnDrop(token, colors, radius, texSize) {
+function spawnDrop(token, colors, halfW, halfH, texSize) {
   const w = texSize * (0.006 + Math.random() * 0.008);
   const h = texSize * (0.022 + Math.random() * 0.028);
   const color = Math.random() < 0.65 ? colors.primary : colors.secondary;
@@ -48,18 +48,17 @@ function spawnDrop(token, colors, radius, texSize) {
   g.bezierCurveTo(-w,  h * 0.35, -w, -h * 0.05,  0, -h * 0.3);
   g.endFill();
 
-  // Spawn at a random X within the token, at the top of the circle
   g._speed   = 0.25 + Math.random() * 0.45;
-  g._maxFall = radius * (1.6 + Math.random() * 0.8);
-  g.x        = rand(-radius * 0.85, radius * 0.85);
-  g.y        = -radius;
-  g.rotation = 0;   // teardrop already points downward (fat end at bottom)
+  g._halfH   = halfH;
+  g.x        = rand(-halfW * 0.85, halfW * 0.85);
+  g.y        = -halfH;
+  g.rotation = 0;
   g.alpha    = 0.9 + Math.random() * 0.1;
 
   return g;
 }
 
-function buildNoiseSprite(radius) {
+function buildNoiseSprite(halfW, halfH) {
   const size = 128;
   const noiseCanvas = document.createElement("canvas");
   noiseCanvas.width = size;
@@ -76,36 +75,37 @@ function buildNoiseSprite(radius) {
   ctx.putImageData(img, 0, 0);
 
   const sprite = new PIXI.Sprite(PIXI.Texture.from(noiseCanvas));
-  sprite.width  = radius * 2;
-  sprite.height = radius * 2;
-  sprite.x      = -radius;
-  sprite.y      = -radius;
+  sprite.width  = halfW * 2;
+  sprite.height = halfH * 2;
+  sprite.x      = -halfW;
+  sprite.y      = -halfH;
   return sprite;
 }
 
 export function ensureBleedingOverlay(token) {
   if (RUNTIME.bleeding.has(token.id)) return;
 
-  const radius  = Math.min(token.w, token.h) * 0.48;
+  const halfW  = token.w / 2;
+  const halfH  = token.h / 2;
   const texSize = Math.max(token.w, token.h);
   const colors  = getBloodColors();
   const count   = Number(game.settings.get(MODULE_ID, "bleedingDropCount") ?? 12);
 
   const container = new PIXI.Container();
   container._hvBleeding = true;
-  container.x = token.w / 2;
-  container.y = token.h / 2;
+  container.x = halfW;
+  container.y = halfH;
 
-  // Circular mask — clips drops to token footprint
+  // Elliptical mask — matches the token's actual footprint
   const mask = new PIXI.Graphics();
   mask.beginFill(0xFFFFFF, 1);
-  mask.drawCircle(0, 0, radius * 1.1);
+  mask.drawEllipse(0, 0, halfW * 1.05, halfH * 1.05);
   mask.endFill();
   container.addChild(mask);
   container.mask = mask;
 
   // Noise sprite for displacement filter
-  const noiseSprite = buildNoiseSprite(radius);
+  const noiseSprite = buildNoiseSprite(halfW, halfH);
   container.addChild(noiseSprite);
   container._noiseSprite = noiseSprite;
 
@@ -124,16 +124,17 @@ export function ensureBleedingOverlay(token) {
   // Spawn drops and stagger their initial vertical positions
   const drops = [];
   for (let i = 0; i < count; i++) {
-    const drop = spawnDrop(token, colors, radius, texSize);
-    const stagger = Math.random() * drop._maxFall;
-    drop.y = -radius + stagger;
-    drop.alpha = Math.max(0.1, drop.alpha - stagger / drop._maxFall);
+    const drop = spawnDrop(token, colors, halfW, halfH, texSize);
+    const stagger = Math.random() * halfH * 2;
+    drop.y = -halfH + stagger;
+    drop.alpha = Math.max(0.1, drop.alpha - stagger / (halfH * 2));
     container.addChild(drop);
     drops.push(drop);
   }
 
   container._hvDrops   = drops;
-  container._hvRadius  = radius;
+  container._hvHalfW   = halfW;
+  container._hvHalfH   = halfH;
   container._hvTexSize = texSize;
 
   token.addChild(container);
@@ -155,7 +156,8 @@ function animateBleedingOverlay(tokenId, token) {
   const overlay = RUNTIME.bleeding.get(tokenId);
   if (!overlay) return;
 
-  const radius  = overlay._hvRadius;
+  const halfW   = overlay._hvHalfW;
+  const halfH   = overlay._hvHalfH;
   const texSize = overlay._hvTexSize;
 
   const tickerFn = () => {
@@ -182,10 +184,10 @@ function animateBleedingOverlay(tokenId, token) {
       d.scale.y += 0.02;
       d.alpha   -= 0.005;
 
-      if (d.alpha <= 0 || d.y >= radius) {
+      if (d.alpha <= 0 || d.y >= halfH) {
         current.removeChild(d);
         d.destroy();
-        const fresh = spawnDrop(token, colors, radius, texSize);
+        const fresh = spawnDrop(token, colors, halfW, halfH, texSize);
         current.addChild(fresh);
         drops[i] = fresh;
       }
