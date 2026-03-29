@@ -30,7 +30,9 @@
       "WebFetch(domain:wiki.bailey.wiki)",
       "WebFetch(domain:pixijs.download)",
       "WebFetch(domain:foundryvtt.wiki)",
-      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.8 ''agnostic-token-damage-effects-v0.8.zip'' --title ''v0.8 \\(testing\\)'' --notes ''Testing release. Adds creature-type-based blood colors with settings dialog, elemental blood suppression, partial type string matching for parenthetical types, and a continuous damage red tint via the TMFX adjustment filter alongside desaturation.''\")"
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.8 ''agnostic-token-damage-effects-v0.8.zip'' --title ''v0.8 \\(testing\\)'' --notes ''Testing release. Adds creature-type-based blood colors with settings dialog, elemental blood suppression, partial type string matching for parenthetical types, and a continuous damage red tint via the TMFX adjustment filter alongside desaturation.''\")",
+      "Bash(powershell.exe -Command \"Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::OpenRead\\(''agnostic-token-damage-effects-v0.8.zip''\\).Entries | Select-Object FullName\")",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release upload v0.8 ''agnostic-token-damage-effects-v0.8.zip'' --clobber\")"
     ]
   }
 }
