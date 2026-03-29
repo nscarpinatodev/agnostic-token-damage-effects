@@ -43,16 +43,24 @@ async function tryDelete(target, filterId) {
 }
 
 export async function applySaturation(token, state) {
-  if (!game.settings.get(MODULE_ID, "enableSaturation")) {
+  const satEnabled  = game.settings.get(MODULE_ID, "enableSaturation");
+  const tintEnabled = game.settings.get(MODULE_ID, "enableDamageTint");
+
+  if (!satEnabled && !tintEnabled) {
     await clearVisualFilter(token);
     return;
   }
   if (!tokenMagicAvailable() || !token) return;
 
+  // damage = 0 at full HP, 1 at 0 HP
+  const damage = 1 - state.ratioRaw;
   const params = [{
     filterType: "adjustment",
     filterId: TMFX_FILTER_ID,
-    saturation: state.saturation
+    saturation: satEnabled ? state.saturation : 1,
+    red:   tintEnabled ? 1 + damage * 0.50 : 1,
+    green: tintEnabled ? 1 - damage * 0.40 : 1,
+    blue:  tintEnabled ? 1 - damage * 0.40 : 1
   }];
 
   const targets = [token, token.document, [token], [token.document]].filter(Boolean);
