@@ -25,7 +25,10 @@
       "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.4 agnostic-token-damage-effects-v0.4.zip --title ''v0.4'' --notes ''## Changes:*)",
       "Bash(powershell.exe -Command \"Compress-Archive -Path module.json, scripts -DestinationPath agnostic-token-damage-effects-v0.6.zip -Force\")",
       "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.6 agnostic-token-damage-effects-v0.6.zip --title ''v0.6'' --notes ''## Changes:*)",
-      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.7 ''agnostic-token-damage-effects-v0.7.zip'' --title ''v0.7'' --notes ''Creature-type-based blood colors with settings dialog. Undead, constructs, aberrations, plants, oozes, celestials/fey, fiends, and dragons each have distinct default colors. Elementals suppress blood effects but keep desaturation. A new GM settings dialog lets colors be customized per type. Adds a Custom creature type path field for unsupported systems. Also: blood pool now takes ~16s to fully spread, fade-out timer starts only after full spread, and pool color darkens over its lifetime.''\")"
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.7 ''agnostic-token-damage-effects-v0.7.zip'' --title ''v0.7'' --notes ''Creature-type-based blood colors with settings dialog. Undead, constructs, aberrations, plants, oozes, celestials/fey, fiends, and dragons each have distinct default colors. Elementals suppress blood effects but keep desaturation. A new GM settings dialog lets colors be customized per type. Adds a Custom creature type path field for unsupported systems. Also: blood pool now takes ~16s to fully spread, fade-out timer starts only after full spread, and pool color darkens over its lifetime.''\")",
+      "WebFetch(domain:api.pixijs.io)",
+      "WebFetch(domain:wiki.bailey.wiki)",
+      "WebFetch(domain:pixijs.download)"
     ]
   }
 }

@@ -48,14 +48,22 @@ const TRAIT_PRIORITY = [
 
 export function normalizeType(raw) {
   if (!raw || typeof raw !== "string") return null;
-  return RAW_TO_KEY[raw.toLowerCase().trim()] ?? null;
+  const lower = raw.toLowerCase().trim();
+  // Exact match first
+  if (lower in RAW_TO_KEY) return RAW_TO_KEY[lower];
+  // Partial match — handles "Fiend (Demon)", "Humanoid (Elf)", "Dragon (Chromatic)", etc.
+  for (const [key, typeKey] of Object.entries(RAW_TO_KEY)) {
+    if (lower.includes(key)) return typeKey;
+  }
+  return null;
 }
 
 function normalizeTraitArray(traits) {
   if (!Array.isArray(traits)) return null;
   const lower = traits.map(t => (typeof t === "string" ? t.toLowerCase() : ""));
   for (const raw of TRAIT_PRIORITY) {
-    if (lower.includes(raw)) return RAW_TO_KEY[raw] ?? null;
+    // Exact element match first, then substring match for parenthetical variants
+    if (lower.includes(raw) || lower.some(t => t.includes(raw))) return RAW_TO_KEY[raw] ?? null;
   }
   return null;
 }
