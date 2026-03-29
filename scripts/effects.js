@@ -33,15 +33,10 @@ function tint(color, factor = 1) {
 }
 
 // ---------------------------------------------------------------------------
-// Bleeding overlay — teardrop drops spawned at token perimeter
+// Bleeding overlay — teardrop drops falling vertically top-to-bottom
 // ---------------------------------------------------------------------------
 
 function spawnDrop(token, colors, radius, texSize) {
-  // Weight spawn angles toward the bottom (roughly 9 o'clock → bottom → 3 o'clock)
-  const angleMin = Math.PI * 0.17;
-  const angleRange = Math.PI * 1.67;
-  const angle = angleMin + Math.random() * angleRange;
-
   const w = texSize * (0.006 + Math.random() * 0.008);
   const h = texSize * (0.022 + Math.random() * 0.028);
   const color = Math.random() < 0.65 ? colors.primary : colors.secondary;
@@ -53,15 +48,13 @@ function spawnDrop(token, colors, radius, texSize) {
   g.bezierCurveTo(-w,  h * 0.35, -w, -h * 0.05,  0, -h * 0.3);
   g.endFill();
 
-  g._angle    = angle;
-  g._speed    = 0.6 + Math.random() * 1.3;
-  g._maxFall  = radius * (0.8 + Math.random() * 1.0);
-  g._originX  = Math.cos(angle) * radius;
-  g._originY  = Math.sin(angle) * radius;
-  g.x         = g._originX;
-  g.y         = g._originY;
-  g.rotation  = angle + Math.PI / 2;   // point outward
-  g.alpha     = 0.9 + Math.random() * 0.1;
+  // Spawn at a random X within the token, at the top of the circle
+  g._speed   = 0.6 + Math.random() * 1.3;
+  g._maxFall = radius * (1.6 + Math.random() * 0.8);
+  g.x        = rand(-radius * 0.85, radius * 0.85);
+  g.y        = -radius;
+  g.rotation = Math.PI / 2;   // point downward
+  g.alpha    = 0.9 + Math.random() * 0.1;
 
   return g;
 }
@@ -128,13 +121,12 @@ export function ensureBleedingOverlay(token) {
   } catch (_) {}
   if (filters.length) container.filters = filters;
 
-  // Spawn drops and stagger their initial positions
+  // Spawn drops and stagger their initial vertical positions
   const drops = [];
   for (let i = 0; i < count; i++) {
     const drop = spawnDrop(token, colors, radius, texSize);
     const stagger = Math.random() * drop._maxFall;
-    drop.x = drop._originX + Math.cos(drop._angle) * stagger;
-    drop.y = drop._originY + Math.sin(drop._angle) * stagger;
+    drop.y = -radius + stagger;
     drop.alpha = Math.max(0.1, drop.alpha - stagger / drop._maxFall);
     container.addChild(drop);
     drops.push(drop);
@@ -185,15 +177,12 @@ function animateBleedingOverlay(tokenId, token) {
     for (let i = drops.length - 1; i >= 0; i--) {
       const d = drops[i];
 
-      // Move outward along spawn angle, elongate, fade
-      d.x        += Math.cos(d._angle) * d._speed;
-      d.y        += Math.sin(d._angle) * d._speed;
-      d.scale.y  += 0.02;
-      d.alpha    -= 0.005;
+      // Fall straight down, elongate, fade
+      d.y       += d._speed;
+      d.scale.y += 0.02;
+      d.alpha   -= 0.005;
 
-      const dist = Math.hypot(d.x - d._originX, d.y - d._originY);
-
-      if (d.alpha <= 0 || dist >= d._maxFall) {
+      if (d.alpha <= 0 || d.y >= radius) {
         current.removeChild(d);
         d.destroy();
         const fresh = spawnDrop(token, colors, radius, texSize);
