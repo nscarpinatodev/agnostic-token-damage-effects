@@ -385,11 +385,14 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
   const halfW = token.w / 2;
   const halfH = token.h / 2;
 
-  // Build path as token centers: start → captured waypoints → end
+  // Build path as token centers: start → captured waypoints → end.
+  // Use tokenDoc.x/y (the updated document values) rather than token.x/y (the
+  // canvas display object), which may not have been repositioned yet when this
+  // hook fires.
   const points = [
     { x: prev.x + halfW, y: prev.y + halfH },
     ...(Array.isArray(prev.waypoints) ? prev.waypoints.map(wp => ({ x: wp.x, y: wp.y })) : []),
-    { x: token.x + halfW, y: token.y + halfH }
+    { x: tokenDoc.x + halfW, y: tokenDoc.y + halfH }
   ];
 
   const gridSize = canvas.grid?.size ?? 100;
