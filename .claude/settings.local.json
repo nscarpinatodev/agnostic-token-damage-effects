@@ -44,7 +44,12 @@
       "Bash(zip -r agnostic-token-damage-effects-v1.2.zip module.json scripts/ templates/ --exclude \"*.DS_Store\")",
       "Bash(powershell -Command \"Compress-Archive -Path module.json, scripts, templates -DestinationPath agnostic-token-damage-effects-v1.2.zip -Force\")",
       "Bash(gh release:*)",
-      "Bash(powershell -Command \"Get-Command gh -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")"
+      "Bash(powershell -Command \"Get-Command gh -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(powershell -Command \"Compress-Archive -Path module.json, scripts, templates -DestinationPath agnostic-token-damage-effects-v1.21.zip -Force\")",
+      "Bash(powershell -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v1.22 ''c:\\\\Users\\\\djsco\\\\OneDrive\\\\Documents\\\\GitHub\\\\agnostic-token-damage-effects\\\\agnostic-token-damage-effects-v1.22.zip'' --title ''v1.22'' --notes ''Blood path trails now drop marks continuously along the actual movement path in real time, with smears oriented to the direction of travel.'' --repo nscarpinatodev/agnostic-token-damage-effects\")",
+      "Bash(powershell -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v1.23 ''c:\\\\Users\\\\djsco\\\\OneDrive\\\\Documents\\\\GitHub\\\\agnostic-token-damage-effects\\\\agnostic-token-damage-effects-v1.23.zip'' --title ''v1.23'' --notes ''Rewrite blood path trails: marks now placed at evenly-spaced intervals along the actual movement path, with smears oriented to direction of travel. Correctly handles multi-segment paths with ruler waypoints.'' --repo nscarpinatodev/agnostic-token-damage-effects\")",
+      "WebFetch(domain:foundryvtt.com)",
+      "Bash(powershell -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v1.29 ''c:\\\\Users\\\\djsco\\\\OneDrive\\\\Documents\\\\GitHub\\\\agnostic-token-damage-effects\\\\agnostic-token-damage-effects-v1.29.zip'' --title ''v1.29'' --notes ''Debug build: switch to tokenDoc.movementHistory for authoritative waypoint data.'' --repo nscarpinatodev/agnostic-token-damage-effects\")"
     ]
   }
 }
