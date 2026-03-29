@@ -32,7 +32,19 @@
       "WebFetch(domain:foundryvtt.wiki)",
       "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.8 ''agnostic-token-damage-effects-v0.8.zip'' --title ''v0.8 \\(testing\\)'' --notes ''Testing release. Adds creature-type-based blood colors with settings dialog, elemental blood suppression, partial type string matching for parenthetical types, and a continuous damage red tint via the TMFX adjustment filter alongside desaturation.''\")",
       "Bash(powershell.exe -Command \"Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::OpenRead\\(''agnostic-token-damage-effects-v0.8.zip''\\).Entries | Select-Object FullName\")",
-      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release upload v0.8 ''agnostic-token-damage-effects-v0.8.zip'' --clobber\")"
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release upload v0.8 ''agnostic-token-damage-effects-v0.8.zip'' --clobber\")",
+      "Bash(sed -i 's/\"\"version\"\": \"\"0.8\"\"/\"\"version\"\": \"\"0.9\"\"/' module.json)",
+      "Bash(sed -i 's/v0.8\\\\/agnostic-token-damage-effects-v0.8.zip/v0.9\\\\/agnostic-token-damage-effects-v0.9.zip/' module.json)",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.9 ''agnostic-token-damage-effects-v0.9.zip'' --title ''v0.9'' --notes ''Damage tint now derives from the creature blood color rather than hardcoded red. The dominant color channel is boosted to 1.8 at 0 HP while absent channels fall to 0.3, giving each creature type a visually distinct tint. Elementals receive desaturation only with no tint applied.''\")",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v1.1 ''agnostic-token-damage-effects-v1.1.zip'' --title ''v1.1'' --notes ''Adds blood path trails: a new Enable Blood Path Trails setting places randomised drips and directional smears in each grid square a bloodied token crosses during movement. Smears are oriented to the travel direction and the system respects ruler waypoints for multi-segment paths. Marks share the existing trail lifetime and spacing settings. Also changes the undead default blood color to medium gray.''\")",
+      "Bash(git -C \"c:\\\\Users\\\\djsco\\\\OneDrive\\\\Documents\\\\GitHub\\\\agnostic-token-damage-effects\" diff HEAD~1 --stat)",
+      "Bash(git -C \"c:\\\\Users\\\\djsco\\\\OneDrive\\\\Documents\\\\GitHub\\\\agnostic-token-damage-effects\" show d337f2c --stat)",
+      "Bash(git -C \"c:\\\\Users\\\\djsco\\\\OneDrive\\\\Documents\\\\GitHub\\\\agnostic-token-damage-effects\" show 488abb9 --stat)",
+      "Bash(git -C \"c:\\\\Users\\\\djsco\\\\OneDrive\\\\Documents\\\\GitHub\\\\agnostic-token-damage-effects\" status)",
+      "Bash(zip -r agnostic-token-damage-effects-v1.2.zip module.json scripts/ templates/ --exclude \"*.DS_Store\")",
+      "Bash(powershell -Command \"Compress-Archive -Path module.json, scripts, templates -DestinationPath agnostic-token-damage-effects-v1.2.zip -Force\")",
+      "Bash(gh release:*)",
+      "Bash(powershell -Command \"Get-Command gh -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")"
     ]
   }
 }
