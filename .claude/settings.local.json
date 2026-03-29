@@ -29,7 +29,8 @@
       "WebFetch(domain:api.pixijs.io)",
       "WebFetch(domain:wiki.bailey.wiki)",
       "WebFetch(domain:pixijs.download)",
-      "WebFetch(domain:foundryvtt.wiki)"
+      "WebFetch(domain:foundryvtt.wiki)",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.8 ''agnostic-token-damage-effects-v0.8.zip'' --title ''v0.8 \\(testing\\)'' --notes ''Testing release. Adds creature-type-based blood colors with settings dialog, elemental blood suppression, partial type string matching for parenthetical types, and a continuous damage red tint via the TMFX adjustment filter alongside desaturation.''\")"
     ]
   }
 }
