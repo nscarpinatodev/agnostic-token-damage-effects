@@ -350,35 +350,35 @@ export function ensureBloodPool(token) {
   g.alpha = 0.72;
   g._hvProgress = 0.03;
 
-  // Pick 2-4 primary directions for directional clustering
-  const primaryAngles = Array.from(
-    { length: Math.floor(rand(2, 5)) },
-    () => rand(0, Math.PI * 2)
-  );
+  const baseRadius = Math.max(token.w, token.h) * 0.45;
 
-  const lobes = [];
-  const lobeCount = 14;
-  for (let i = 0; i < lobeCount; i++) {
-    let angle;
-    if (primaryAngles.length > 0 && i < primaryAngles.length * 2) {
-      const primary = primaryAngles[i % primaryAngles.length];
-      angle = primary + rand(-0.35, 0.35);
-    } else {
-      angle = rand(0, Math.PI * 2);
-    }
-
-    const isTendril = Math.random() < 0.35;
-    lobes.push({
+  // Generate radial arm points that define the blob boundary.
+  // A quarter of them are "spikes" that extend much farther outward.
+  const armCount = 26 + Math.floor(rand(0, 10));
+  const arms = [];
+  for (let i = 0; i < armCount; i++) {
+    const angle = (i / armCount) * Math.PI * 2 + rand(-0.08, 0.08);
+    const isSpike = Math.random() < 0.28;
+    arms.push({
       angle,
-      reach:         isTendril ? rand(1.1, 1.65) : rand(0.55, 1.1),
-      size:          isTendril ? rand(0.07, 0.14) : rand(0.14, 0.30),
-      aspect:        isTendril ? rand(0.25, 0.55) : rand(0.70, 1.25),
-      xScale:        rand(0.44, 0.64),
-      yScale:        rand(0.34, 0.54),
-      startProgress: rand(0.04, 0.42)
+      maxRadius:     isSpike ? baseRadius * rand(1.4, 2.2) : baseRadius * rand(0.38, 1.05),
+      startProgress: rand(0, 0.32)
     });
   }
-  g._hvLobes       = lobes;
+
+  // Satellite droplets near the tips of spike arms
+  const satellites = arms
+    .filter(a => a.maxRadius > baseRadius * 1.3)
+    .map(a => ({
+      angle:         a.angle + rand(-0.4, 0.4),
+      dist:          a.maxRadius * rand(0.75, 1.05),
+      size:          rand(3, 9),
+      startProgress: Math.min(0.95, a.startProgress + rand(0.15, 0.35))
+    }));
+
+  g._hvArms        = arms;
+  g._hvSatellites  = satellites;
+  g._hvBaseRadius  = baseRadius;
   g._hvHighlightX  = rand(-0.22, 0.08);
   g._hvHighlightY  = rand(-0.18, 0.04);
 
@@ -427,41 +427,60 @@ export function removeBloodPool(tokenId) {
 
 function drawBloodPool(g, token, progress = 1) {
   const bloodColor = getBloodColor();
-  const darkBlood  = tint(bloodColor, 0.7);
-
-  const baseRX = Math.max(token.w * 0.34, 18) * progress;
-  const baseRY = Math.max(token.h * 0.24, 12) * progress;
+  const darkBlood  = tint(bloodColor, 0.65);
+  const baseRadius = g._hvBaseRadius ?? Math.max(token.w, token.h) * 0.45;
 
   g.clear();
 
-  g.beginFill(darkBlood, 0.45);
-  g.drawEllipse(0, 0, baseRX * 1.12, baseRY * 1.08);
+  const arms = g._hvArms ?? [];
+  if (arms.length === 0) return;
+
+  // Compute each arm's current reach with eased growth and staggered start
+  const pts = arms.map(arm => {
+    const t = Math.max(0, Math.min(1, (progress - arm.startProgress) / (1.0 - arm.startProgress)));
+    const eased = 1 - Math.pow(1 - t, 2.2);
+    const r = arm.maxRadius * eased;
+    return { x: Math.cos(arm.angle) * r, y: Math.sin(arm.angle) * r };
+  });
+
+  const n = pts.length;
+
+  // Draw dark shadow blob (scaled out slightly)
+  g.beginFill(darkBlood, 0.5);
+  g.moveTo((pts[n - 1].x * 1.09 + pts[0].x * 1.09) / 2, (pts[n - 1].y * 1.09 + pts[0].y * 1.09) / 2);
+  for (let i = 0; i < n; i++) {
+    const p0x = pts[i].x * 1.09,             p0y = pts[i].y * 1.09;
+    const p1x = pts[(i + 1) % n].x * 1.09,   p1y = pts[(i + 1) % n].y * 1.09;
+    g.quadraticCurveTo(p0x, p0y, (p0x + p1x) / 2, (p0y + p1y) / 2);
+  }
+  g.closePath();
   g.endFill();
 
-  g.beginFill(bloodColor, 0.40);
-  g.drawEllipse(0, 0, baseRX, baseRY);
+  // Draw main blood blob
+  g.beginFill(bloodColor, 0.78);
+  g.moveTo((pts[n - 1].x + pts[0].x) / 2, (pts[n - 1].y + pts[0].y) / 2);
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[i];
+    const p1 = pts[(i + 1) % n];
+    g.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+  }
+  g.closePath();
   g.endFill();
 
-  const lobes = g._hvLobes ?? [];
-  for (const lobe of lobes) {
-    const lobeT = Math.max(0, (progress - lobe.startProgress) / (1.0 - lobe.startProgress));
-    if (lobeT <= 0) continue;
-    const dist = Math.max(baseRX, baseRY) * lobe.reach;
-    const x    = Math.cos(lobe.angle) * dist * lobe.xScale;
-    const y    = Math.sin(lobe.angle) * dist * lobe.yScale;
-    g.beginFill(darkBlood, 0.28 * Math.min(lobeT, 1));
-    g.drawEllipse(
-      x, y,
-      Math.max(2, baseRX * lobe.size * lobeT),
-      Math.max(2, baseRY * lobe.size * lobe.aspect * lobeT)
-    );
+  // Satellite droplets at spike tips
+  for (const sat of g._hvSatellites ?? []) {
+    const t = Math.max(0, Math.min(1, (progress - sat.startProgress) / (1.0 - sat.startProgress)));
+    if (t <= 0) continue;
+    g.beginFill(darkBlood, 0.65 * t);
+    g.drawCircle(Math.cos(sat.angle) * sat.dist * t, Math.sin(sat.angle) * sat.dist * t, sat.size * t);
     g.endFill();
   }
 
-  const hx = (g._hvHighlightX ?? -0.15) * baseRX;
-  const hy = (g._hvHighlightY ?? -0.08) * baseRY;
-  g.beginFill(tint(bloodColor, 1.08), 0.18);
-  g.drawEllipse(hx, hy, baseRX * 0.28, baseRY * 0.22);
+  // Wet highlight
+  const hx = (g._hvHighlightX ?? -0.15) * baseRadius * 0.45 * progress;
+  const hy = (g._hvHighlightY ?? -0.08) * baseRadius * 0.35 * progress;
+  g.beginFill(tint(bloodColor, 1.12), 0.18);
+  g.drawEllipse(hx, hy, baseRadius * 0.18 * progress, baseRadius * 0.13 * progress);
   g.endFill();
 }
 
