@@ -52,13 +52,18 @@ export function registerSettings(refreshAllVisibleTokens) {
     onChange: () => refreshAllVisibleTokens()
   });
 
-  game.settings.register(MODULE_ID, "enableDamageTint", {
-    name: "Enable Creature Type Blood Color Tint",
-    hint: "Continuously tints the token image toward its blood color as HP decreases, similar to BG3 combat portraits.",
+  game.settings.register(MODULE_ID, "damageTintStyle", {
+    name: "Damage Tint Style",
+    hint: "How the token is tinted toward its blood color as HP decreases.",
     scope: "world",
     config: true,
-    type: Boolean,
-    default: true,
+    type: String,
+    choices: {
+      disabled: "Disabled",
+      fade:     "Uniform Fade — whole token tints toward blood color",
+      bottomUp: "Bottom-Up Fill — blood color rises from the bottom based on damage"
+    },
+    default: "fade",
     onChange: () => refreshAllVisibleTokens()
   });
 

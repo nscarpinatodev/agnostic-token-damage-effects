@@ -1,7 +1,7 @@
 import { MODULE_ID, tokenMagicAvailable, getSelectedPreset } from "./presets.js";
 import { registerSettings } from "./settings.js";
 import { hpRelevantChange, getActorHp } from "./hp-resolver.js";
-import { computeState, applyAlpha, applySaturation, clearVisualFilter } from "./visuals.js";
+import { computeState, applyAlpha, applySaturation, clearVisualFilter, applyBottomUpFill, clearBottomUpFill } from "./visuals.js";
 import { getBloodColorForActor } from "./creature-types.js";
 import {
   ensureBleedingOverlay,
@@ -37,6 +37,7 @@ Hooks.on("createToken", tokenDoc => {
 
 Hooks.on("deleteToken", tokenDoc => {
   clearRuntimeEffects(tokenDoc.id);
+  clearBottomUpFill(tokenDoc.id);
   PRE_MOVE.delete(tokenDoc.id);
 });
 
@@ -135,6 +136,7 @@ async function applyStateToToken(tokenDoc) {
   if (!hp) {
     await clearVisualFilter(token);
     clearRuntimeEffects(tokenDoc.id);
+    clearBottomUpFill(tokenDoc.id);
     PRE_MOVE.delete(tokenDoc.id);
     if ((tokenDoc.alpha ?? 1) !== 1) {
       await tokenDoc.update({ alpha: 1 }, { animate: false });
@@ -148,6 +150,14 @@ async function applyStateToToken(tokenDoc) {
   await applyAlpha(tokenDoc, state.alpha);
   // suppressBlood = true for elementals: desaturate normally, skip the blood tint
   await applySaturation(token, state, colorOverride, !suppressBlood);
+
+  // Bottom-up fill: show while alive and damaged, clear otherwise
+  const tintStyle = game.settings.get(MODULE_ID, "damageTintStyle");
+  if (tintStyle === "bottomUp" && !suppressBlood && !state.isDead) {
+    applyBottomUpFill(token, 1 - state.ratioRaw, colorOverride);
+  } else {
+    clearBottomUpFill(token.id);
+  }
 
   if (suppressBlood) {
     removeBleedingOverlay(tokenDoc.id);
