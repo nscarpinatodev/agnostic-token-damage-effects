@@ -48,10 +48,10 @@ async function tryDelete(target, filterId) {
 }
 
 export async function applySaturation(token, state, tintColor = null, applyTint = true) {
-  const satEnabled = game.settings.get(MODULE_ID, "enableSaturation");
-  const tintStyle  = game.settings.get(MODULE_ID, "damageTintStyle");
+  const satEnabled  = game.settings.get(MODULE_ID, "enableSaturation");
+  const tintEnabled = game.settings.get(MODULE_ID, "enableDamageTint");
 
-  if (!satEnabled && tintStyle === "disabled") {
+  if (!satEnabled && !tintEnabled) {
     await clearVisualFilter(token);
     return;
   }
@@ -59,21 +59,27 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
 
   let red = 1, green = 1, blue = 1;
 
-  // Uniform fade: drive RGB channels from the blood color
-  if (applyTint && tintStyle === "fade") {
+  if (applyTint && tintEnabled) {
+    // damage = 0 at full HP, 1 at 0 HP
     const damage = 1 - state.ratioRaw;
-    const color  = tintColor ?? hexToNumber(game.settings.get(MODULE_ID, "bloodColor"));
 
+    // Resolve the tint color — creature-type color, or fall back to global blood color
+    const color = tintColor ?? hexToNumber(game.settings.get(MODULE_ID, "bloodColor"));
+
+    // Extract normalised RGB channels (0–1) and find the dominant channel
     const rRaw = ((color >> 16) & 0xff) / 255;
     const gRaw = ((color >> 8)  & 0xff) / 255;
     const bRaw = ( color        & 0xff) / 255;
     const maxC = Math.max(rRaw, gRaw, bRaw);
 
     if (maxC > 0) {
+      // Normalise so the dominant channel = 1; others scale proportionally
       const rN = rRaw / maxC;
       const gN = gRaw / maxC;
       const bN = bRaw / maxC;
-      // Dominant channel → 1.8 at 0 HP; absent channels → 0.3 at 0 HP
+
+      // Dominant channels are boosted toward 1.8; absent channels are pulled toward 0.3
+      // Formula: 1 + (norm * 0.8 - (1 - norm) * 0.7) * damage
       red   = 1 + (rN * 0.8 - (1 - rN) * 0.7) * damage;
       green = 1 + (gN * 0.8 - (1 - gN) * 0.7) * damage;
       blue  = 1 + (bN * 0.8 - (1 - bN) * 0.7) * damage;
@@ -106,83 +112,4 @@ export async function clearVisualFilter(token) {
     const ok = await tryDelete(target, TMFX_FILTER_ID);
     if (ok) break;
   }
-}
-
-// ---------------------------------------------------------------------------
-// Bottom-up damage fill
-// ---------------------------------------------------------------------------
-
-const FILLS = new Map(); // tokenId → PIXI.Container
-
-export function applyBottomUpFill(token, damage, colorOverride) {
-  if (!token || token.destroyed) return;
-  const tokenId = token.id;
-
-  if (damage <= 0.005) {
-    clearBottomUpFill(tokenId);
-    return;
-  }
-
-  const halfW = token.w / 2;
-  const halfH = token.h / 2;
-
-  // Create container on first call for this token
-  let container = FILLS.get(tokenId);
-  if (!container) {
-    container = new PIXI.Container();
-    container._hvDamageFill = true;
-
-    // Ellipse mask — clips fill to token footprint
-    const mask = new PIXI.Graphics();
-    mask.beginFill(0xffffff);
-    mask.drawEllipse(halfW, halfH, halfW * 0.97, halfH * 0.97);
-    mask.endFill();
-    container.addChild(mask);
-    container.mask = mask;
-
-    // Fill graphic — redrawn on each HP update
-    const fillGfx = new PIXI.Graphics();
-    fillGfx.blendMode = PIXI.BLEND_MODES?.MULTIPLY ?? 12;
-    container.addChild(fillGfx);
-    container._hvFillGfx = fillGfx;
-
-    token.addChild(container);
-    FILLS.set(tokenId, container);
-  }
-
-  const bloodColor = colorOverride ?? hexToNumber(game.settings.get(MODULE_ID, "bloodColor"));
-  const fillGfx    = container._hvFillGfx;
-  fillGfx.clear();
-
-  const fillHeight   = token.h * damage;
-  const topY         = token.h - fillHeight;
-  const baseAlpha    = 0.70;
-
-  // Feathered top edge: 12 strips rising from transparent to solid
-  const featherHeight = Math.min(fillHeight * 0.25, 30);
-  const solidHeight   = fillHeight - featherHeight;
-  const steps         = 12;
-  const stripH        = featherHeight / steps;
-
-  for (let i = 0; i < steps; i++) {
-    const t = (i + 0.5) / steps; // 0 at top of feather, 1 at bottom
-    fillGfx.beginFill(bloodColor, baseAlpha * t);
-    fillGfx.drawRect(0, topY + i * stripH, token.w, stripH + 0.5); // +0.5 prevents hairline gaps
-    fillGfx.endFill();
-  }
-
-  // Solid fill below the feather zone
-  if (solidHeight > 0) {
-    fillGfx.beginFill(bloodColor, baseAlpha);
-    fillGfx.drawRect(0, topY + featherHeight, token.w, solidHeight + 1);
-    fillGfx.endFill();
-  }
-}
-
-export function clearBottomUpFill(tokenId) {
-  const container = FILLS.get(tokenId);
-  if (!container) return;
-  if (container.parent) container.parent.removeChild(container);
-  container.destroy({ children: true });
-  FILLS.delete(tokenId);
 }
