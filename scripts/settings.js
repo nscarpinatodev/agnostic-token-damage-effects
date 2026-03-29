@@ -53,8 +53,8 @@ export function registerSettings(refreshAllVisibleTokens) {
   });
 
   game.settings.register(MODULE_ID, "enableDamageTint", {
-    name: "Enable Damage Red Tint",
-    hint: "Continuously reddens the token image as HP decreases, similar to BG3 combat portraits.",
+    name: "Enable Creature Type Blood Color Tint",
+    hint: "Continuously tints the token image toward its blood color as HP decreases, similar to BG3 combat portraits.",
     scope: "world",
     config: true,
     type: Boolean,
