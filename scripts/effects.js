@@ -27,18 +27,19 @@ function tint(color, factor = 1) {
   return ((r << 16) | (g << 8) | b) >>> 0;
 }
 
-function drawStreak(g, x, y, width, length, color, alpha = 0.85) {
+function drawStreak(g, x, y, width, length, color, alpha = 0.85, tiltX = 0) {
   const dark = tint(color, 0.72);
   const highlight = tint(color, 1.18);
+  const endX = x + tiltX + rand(-0.6, 0.6);
 
   // main skinny streak
   g.lineStyle({ width, color, alpha });
   g.moveTo(x, y);
-  g.lineTo(x + rand(-0.6, 0.6), y + length);
+  g.lineTo(endX, y + length);
 
   // darker pooled tip
   g.beginFill(dark, alpha * 0.9);
-  g.drawCircle(x + rand(-0.4, 0.4), y + length, Math.max(1.2, width * 0.9));
+  g.drawCircle(endX + rand(-0.4, 0.4), y + length, Math.max(1.2, width * 0.9));
   g.endFill();
 
   // tiny source dot at top
@@ -76,12 +77,13 @@ export function ensureBleedingOverlay(token) {
     drops.push({
       g,
       x: rand(token.w * 0.12, token.w * 0.88),
-      y: rand(token.h * 0.04, token.h * 0.82),
+      y: rand(token.h * 0.04, token.h * 0.82),   // initial stagger only
       resetBandTop: rand(token.h * 0.04, token.h * 0.18),
       speed: rand(0.10, 0.22),
       width: rand(1.4, 2.8),
       length: rand(token.h * 0.06, token.h * 0.16),
-      maxTravel: rand(token.h * 0.14, token.h * 0.34)
+      maxTravel: rand(token.h * 0.14, token.h * 0.34),
+      tiltX: rand(-3, 3)
     });
   }
 
@@ -100,7 +102,7 @@ function drawBleedingOverlay(container, token) {
   for (const drop of drops) {
     const g = drop.g;
     g.clear();
-    drawStreak(g, drop.x, drop.y, drop.width, drop.length, bloodColor, 0.82);
+    drawStreak(g, drop.x, drop.y, drop.width, drop.length, bloodColor, 0.82, drop.tiltX ?? 0);
   }
 }
 
@@ -168,15 +170,38 @@ export function ensureBloodPool(token) {
   g.alpha = 0.72;
   g._hvProgress = 0.03;
 
+  // Pick 2-4 primary directions for directional clustering
+  const primaryAngles = Array.from(
+    { length: Math.floor(rand(2, 5)) },
+    () => rand(0, Math.PI * 2)
+  );
+
   const lobes = [];
-  const lobeCount = 10;
+  const lobeCount = 14;
   for (let i = 0; i < lobeCount; i++) {
-    const angle = rand(0, Math.PI * 2);
-    const reach = rand(0.65, 1.35);
-    const size = rand(0.12, 0.28);
-    lobes.push({ angle, reach, size });
+    // First few lobes cluster near primary directions; rest are fully random
+    let angle;
+    if (primaryAngles.length > 0 && i < primaryAngles.length * 2) {
+      const primary = primaryAngles[i % primaryAngles.length];
+      angle = primary + rand(-0.35, 0.35);
+    } else {
+      angle = rand(0, Math.PI * 2);
+    }
+
+    const isTendril = Math.random() < 0.35;
+    lobes.push({
+      angle,
+      reach:        isTendril ? rand(1.1, 1.65) : rand(0.55, 1.1),
+      size:         isTendril ? rand(0.07, 0.14) : rand(0.14, 0.30),
+      aspect:       isTendril ? rand(0.25, 0.55) : rand(0.70, 1.25),
+      xScale:       rand(0.44, 0.64),
+      yScale:       rand(0.34, 0.54),
+      startProgress: rand(0.04, 0.42)
+    });
   }
   g._hvLobes = lobes;
+  g._hvHighlightX = rand(-0.22, 0.08);
+  g._hvHighlightY = rand(-0.18, 0.04);
 
   drawBloodPool(g, token, g._hvProgress);
   layer.addChildAt(g, 0);
@@ -347,11 +372,12 @@ function animateBleedingOverlay(tokenId, token) {
       if ((drop.y - drop.resetBandTop) > drop.maxTravel || (drop.y + drop.length) > token.h * 0.95) {
         drop.x = rand(token.w * 0.12, token.w * 0.88);
         drop.resetBandTop = rand(token.h * 0.04, token.h * 0.18);
-        drop.y = drop.resetBandTop + rand(0, token.h * 0.65);
+        drop.y = drop.resetBandTop;   // always restart from the top band
         drop.speed = rand(0.10, 0.22);
         drop.width = rand(1.4, 2.8);
         drop.length = rand(token.h * 0.06, token.h * 0.16);
         drop.maxTravel = rand(token.h * 0.14, token.h * 0.34);
+        drop.tiltX = rand(-3, 3);
       }
     }
 
@@ -372,26 +398,38 @@ function drawBloodPool(g, token, progress = 1) {
 
   g.clear();
 
+  // dark shadow base
   g.beginFill(darkBlood, 0.45);
   g.drawEllipse(0, 0, baseRX * 1.12, baseRY * 1.08);
   g.endFill();
 
+  // main pool
   g.beginFill(bloodColor, 0.40);
   g.drawEllipse(0, 0, baseRX, baseRY);
   g.endFill();
 
+  // lobes — each has its own start time and shape
   const lobes = g._hvLobes ?? [];
   for (const lobe of lobes) {
+    const lobeT = Math.max(0, (progress - lobe.startProgress) / (1.0 - lobe.startProgress));
+    if (lobeT <= 0) continue;
     const dist = Math.max(baseRX, baseRY) * lobe.reach;
-    const x = Math.cos(lobe.angle) * dist * 0.55;
-    const y = Math.sin(lobe.angle) * dist * 0.45;
-    g.beginFill(darkBlood, 0.28);
-    g.drawEllipse(x, y, Math.max(2, baseRX * lobe.size), Math.max(2, baseRY * lobe.size));
+    const x = Math.cos(lobe.angle) * dist * lobe.xScale;
+    const y = Math.sin(lobe.angle) * dist * lobe.yScale;
+    g.beginFill(darkBlood, 0.28 * Math.min(lobeT, 1));
+    g.drawEllipse(
+      x, y,
+      Math.max(2, baseRX * lobe.size * lobeT),
+      Math.max(2, baseRY * lobe.size * lobe.aspect * lobeT)
+    );
     g.endFill();
   }
 
+  // highlight
+  const hx = (g._hvHighlightX ?? -0.15) * baseRX;
+  const hy = (g._hvHighlightY ?? -0.08) * baseRY;
   g.beginFill(tint(bloodColor, 1.08), 0.18);
-  g.drawEllipse(-baseRX * 0.15, -baseRY * 0.08, baseRX * 0.28, baseRY * 0.22);
+  g.drawEllipse(hx, hy, baseRX * 0.28, baseRY * 0.22);
   g.endFill();
 }
 
