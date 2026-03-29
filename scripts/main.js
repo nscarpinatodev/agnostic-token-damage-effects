@@ -78,7 +78,7 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
 
 // moveToken fires once per move after the update completes, with the full
 // movement operation including origin, destination, and waypoint history.
-Hooks.on("moveToken", (tokenDoc, movement) => {
+Hooks.on("moveToken", async (tokenDoc, movement) => {
   if (!game.settings.get(MODULE_ID, "enableBloodPathTrails")) return;
   if (!canvas?.ready) return;
 
@@ -93,8 +93,6 @@ Hooks.on("moveToken", (tokenDoc, movement) => {
 
   const { color: colorOverride, suppressBlood } = getBloodColorForActor(actor, getSelectedPreset());
   if (suppressBlood) return;
-
-  console.log(`ATDE moveToken | movement=${JSON.stringify({ origin: movement?.origin, destination: movement?.destination, history: movement?.history })}`);
 
   // Build waypoint list from origin + history waypoints + destination
   const origin      = movement?.origin;
@@ -111,7 +109,13 @@ Hooks.on("moveToken", (tokenDoc, movement) => {
     { x: destination.x, y: destination.y }
   ];
 
-  console.log(`ATDE moveToken | waypoints=${JSON.stringify(waypoints)}`);
+  // Wait for the canvas movement animation to finish so marks appear after
+  // the token reaches each waypoint/endpoint.
+  const token = tokenDoc.object;
+  if (token?.movementAnimationPromise) {
+    await token.movementAnimationPromise;
+  }
+
   dropPathTrail(tokenDoc, waypoints, colorOverride);
 });
 

@@ -405,7 +405,6 @@ export function dropPathTrail(tokenDoc, waypoints, colorOverride) {
     // 1 mark per grid square traversed, minimum 1
     const numMarks = Math.max(1, Math.round(dist / gridSize));
 
-    console.log(`ATDE dropPathTrail | seg ${i}: from=${fromX.toFixed(0)},${fromY.toFixed(0)} to=${toX.toFixed(0)},${toY.toFixed(0)} dist=${dist.toFixed(1)} marks=${numMarks}`);
 
     for (let m = 0; m < numMarks; m++) {
       const t  = Math.random();
