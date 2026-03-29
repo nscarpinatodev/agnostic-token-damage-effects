@@ -20,7 +20,9 @@
       "Bash(powershell.exe -Command \"Compress-Archive -Path module.json, scripts -DestinationPath agnostic-token-damage-effects-v0.2.zip -Force\")",
       "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.2 agnostic-token-damage-effects-v0.2.zip --title ''v0.2'' --notes ''## Changes:*)",
       "Bash(powershell.exe -Command \"Compress-Archive -Path module.json, scripts -DestinationPath agnostic-token-damage-effects-v0.3.zip -Force\")",
-      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.3 agnostic-token-damage-effects-v0.3.zip --title ''v0.3'' --notes ''## Changes:*)"
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.3 agnostic-token-damage-effects-v0.3.zip --title ''v0.3'' --notes ''## Changes:*)",
+      "Bash(powershell.exe -Command \"Compress-Archive -Path module.json, scripts -DestinationPath agnostic-token-damage-effects-v0.4.zip -Force\")",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' release create v0.4 agnostic-token-damage-effects-v0.4.zip --title ''v0.4'' --notes ''## Changes:*)"
     ]
   }
 }
