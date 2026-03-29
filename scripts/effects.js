@@ -48,12 +48,17 @@ function spawnDrop(token, colors, halfW, halfH, texSize) {
   g.bezierCurveTo(-w,  h * 0.35, -w, -h * 0.05,  0, -h * 0.3);
   g.endFill();
 
-  g._speed   = 0.25 + Math.random() * 0.45;
-  g._halfH   = halfH;
-  g.x        = rand(-halfW * 0.85, halfW * 0.85);
-  g.y        = -halfH;
-  g.rotation = 0;
-  g.alpha    = 0.9 + Math.random() * 0.1;
+  const speed   = 0.25 + Math.random() * 0.45;
+  const startAlpha = 0.9 + Math.random() * 0.1;
+  const travelFrames = (halfH * 2) / speed;
+
+  g._speed     = speed;
+  g._halfH     = halfH;
+  g._fadeRate  = startAlpha / travelFrames;
+  g.x          = rand(-halfW * 0.85, halfW * 0.85);
+  g.y          = -halfH;
+  g.rotation   = 0;
+  g.alpha      = startAlpha;
 
   return g;
 }
@@ -126,8 +131,9 @@ export function ensureBleedingOverlay(token) {
   for (let i = 0; i < count; i++) {
     const drop = spawnDrop(token, colors, halfW, halfH, texSize);
     const stagger = Math.random() * halfH * 2;
-    drop.y = -halfH + stagger;
-    drop.alpha = Math.max(0.1, drop.alpha - stagger / (halfH * 2));
+    const framesElapsed = stagger / drop._speed;
+    drop.y     = -halfH + stagger;
+    drop.alpha = Math.max(0.05, drop.alpha - drop._fadeRate * framesElapsed);
     container.addChild(drop);
     drops.push(drop);
   }
@@ -182,7 +188,7 @@ function animateBleedingOverlay(tokenId, token) {
       // Fall straight down, elongate, fade
       d.y       += d._speed;
       d.scale.y += 0.02;
-      d.alpha   -= 0.005;
+      d.alpha   -= d._fadeRate;
 
       if (d.alpha <= 0 || d.y >= halfH) {
         current.removeChild(d);
