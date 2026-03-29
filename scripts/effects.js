@@ -98,7 +98,7 @@ export function ensureBleedingOverlay(token, colorOverride = null) {
   const halfW  = token.w / 2;
   const halfH  = token.h / 2;
   const texSize = Math.max(token.w, token.h);
-  const colors  = getBloodColors();
+  const colors  = getBloodColors(colorOverride);
   const count   = Number(game.settings.get(MODULE_ID, "bleedingDropCount") ?? 12);
 
   const container = new PIXI.Container();
