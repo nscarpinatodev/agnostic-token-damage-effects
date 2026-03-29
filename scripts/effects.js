@@ -410,23 +410,25 @@ export function ensureBloodPool(token) {
       PIXI.Ticker.shared.remove(growTicker);
       return;
     }
-    entry.graphic._hvProgress = Math.min(1.0, entry.graphic._hvProgress + 0.0028);
+    entry.graphic._hvProgress = Math.min(1.0, entry.graphic._hvProgress + 0.0010);
     drawBloodPool(entry.graphic, token, entry.graphic._hvProgress);
     if (entry.graphic._hvProgress >= 1.0) {
       PIXI.Ticker.shared.remove(growTicker);
       entry.growTicker = null;
+      // Start darkening + fade-out only once the pool has fully spread
+      const lifetime = Number(game.settings.get(MODULE_ID, "bloodPoolLifetime") ?? 30) * 1000;
+      startBloodPoolDarkening(token.id, lifetime);
+      entry.timeout = setTimeout(() => fadeOutBloodPool(token.id, 2000), lifetime);
     }
   };
 
   PIXI.Ticker.shared.add(growTicker);
 
-  const lifetime    = Number(game.settings.get(MODULE_ID, "bloodPoolLifetime") ?? 30) * 1000;
-  const fadeTimeout = setTimeout(() => fadeOutBloodPool(token.id, 1500), lifetime);
-
   RUNTIME.bloodPools.set(token.id, {
     graphic: g,
-    timeout: fadeTimeout,
+    timeout: null,
     fadeTicker: null,
+    darkTicker: null,
     growTicker
   });
 }
@@ -438,10 +440,39 @@ export function removeBloodPool(tokenId) {
   if (entry.timeout)    clearTimeout(entry.timeout);
   if (entry.fadeTicker) PIXI.Ticker.shared.remove(entry.fadeTicker);
   if (entry.growTicker) PIXI.Ticker.shared.remove(entry.growTicker);
+  if (entry.darkTicker) PIXI.Ticker.shared.remove(entry.darkTicker);
   if (entry.graphic?.parent) entry.graphic.parent.removeChild(entry.graphic);
   entry.graphic?.destroy({ children: true });
 
   RUNTIME.bloodPools.delete(tokenId);
+}
+
+function startBloodPoolDarkening(tokenId, duration) {
+  const entry = RUNTIME.bloodPools.get(tokenId);
+  if (!entry?.graphic) return;
+
+  const graphic = entry.graphic;
+  const start   = performance.now();
+
+  const darkTicker = () => {
+    const current = RUNTIME.bloodPools.get(tokenId);
+    if (!current || !graphic || graphic.destroyed) {
+      PIXI.Ticker.shared.remove(darkTicker);
+      return;
+    }
+    const t = Math.min((performance.now() - start) / duration, 1);
+    // Tween tint from 0xffffff (full color) down to ~0x4d4d4d (~30% brightness)
+    const factor = 1.0 - t * 0.70;
+    const v = Math.round(factor * 255);
+    graphic.tint = (v << 16) | (v << 8) | v;
+    if (t >= 1) {
+      PIXI.Ticker.shared.remove(darkTicker);
+      current.darkTicker = null;
+    }
+  };
+
+  entry.darkTicker = darkTicker;
+  PIXI.Ticker.shared.add(darkTicker);
 }
 
 function drawBloodPool(g, token, progress = 1) {
