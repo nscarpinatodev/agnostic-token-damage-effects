@@ -4,8 +4,7 @@ export const RUNTIME = {
   bleeding: new Map(),
   bloodPools: new Map(),
   bloodTrails: new Map(),
-  lastTrailDrop: new Map(),
-  pathTrailState: new Map()   // { x, y, accum } — accumulated distance between path marks
+  lastTrailDrop: new Map()
 };
 
 function rand(min, max) {
@@ -261,7 +260,6 @@ export function clearBloodTrails(tokenId) {
     RUNTIME.bloodTrails.delete(tokenId);
   }
   RUNTIME.lastTrailDrop.delete(tokenId);
-  RUNTIME.pathTrailState.delete(tokenId);
 }
 
 function createBloodTrailMark(token, oldX, oldY, colorOverride = null) {
@@ -397,46 +395,31 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
   const spacing  = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
   const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
 
-  // updateToken fires for every ~10px incremental step during a drag.
-  // Accumulate distance across calls and place a mark each time we've
-  // traveled `spacing` pixels total, so marks are evenly spread regardless
-  // of how small each individual step is.
-  const fromX = points[0].x;
-  const fromY = points[0].y;
-  const toX   = points[points.length - 1].x;
-  const toY   = points[points.length - 1].y;
-  const dx    = toX - fromX;
-  const dy    = toY - fromY;
-  const dist  = Math.hypot(dx, dy);
-  if (dist < 0.5) return;
+  console.log(`ATDE dropPathTrail | points=${JSON.stringify(points)} spacing=${spacing}`);
 
-  const angle = Math.atan2(dy, dx);
-  const nx    = dx / dist;
-  const ny    = dy / dist;
+  // For each segment, place 1 mark at a random position between A and B,
+  // plus 1 more per additional `spacing` of distance.
+  for (let seg = 0; seg < points.length - 1; seg++) {
+    const p0   = points[seg];
+    const p1   = points[seg + 1];
+    const dx   = p1.x - p0.x;
+    const dy   = p1.y - p0.y;
+    const dist = Math.hypot(dx, dy);
 
-  const state = RUNTIME.pathTrailState.get(token.id) ?? { accum: rand(0, spacing) };
-  let { accum } = state;
+    console.log(`ATDE dropPathTrail | seg ${seg}: dist=${dist.toFixed(1)}`);
+    if (dist < 1) continue;
 
-  let totalMarks = 0;
-  let walked = 0;
-  while (walked < dist) {
-    const remaining = spacing - accum;
-    if (walked + remaining > dist) {
-      // Haven't reached the next mark yet — bank the partial distance
-      accum += dist - walked;
-      break;
+    const angle    = Math.atan2(dy, dx);
+    const numMarks = Math.max(1, Math.floor(dist / spacing));
+
+    for (let i = 0; i < numMarks; i++) {
+      const t  = Math.random();
+      const px = p0.x + dx * t + rand(-6, 6);
+      const py = p0.y + dy * t + rand(-6, 6);
+      console.log(`ATDE dropPathTrail | seg ${seg} mark ${i} at ${px.toFixed(0)},${py.toFixed(0)} t=${t.toFixed(2)}`);
+      _placePathMark(layer, px, py, angle, colorOverride, tokenDoc, lifetime);
     }
-    walked += remaining;
-    accum   = 0;
-    const px = fromX + nx * walked + rand(-6, 6);
-    const py = fromY + ny * walked + rand(-6, 6);
-    console.log(`ATDE dropPathTrail | placing mark at ${px.toFixed(0)},${py.toFixed(0)} walked=${walked.toFixed(1)} dist=${dist.toFixed(1)}`);
-    _placePathMark(layer, px, py, angle, colorOverride, tokenDoc, lifetime);
-    totalMarks++;
   }
-
-  RUNTIME.pathTrailState.set(token.id, { accum });
-  console.log(`ATDE dropPathTrail | dist=${dist.toFixed(1)} placed=${totalMarks} accum=${accum.toFixed(1)}`);
 }
 
 function _placePathMark(layer, x, y, angle, colorOverride, tokenDoc, lifetime) {
