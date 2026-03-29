@@ -69,17 +69,20 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
 
   const actor = tokenDoc.actor;
   if (!actor) {
+    console.log("ATDE trail | no actor, bailing");
     PRE_MOVE.delete(tokenDoc.id);
     return;
   }
 
   const hp = getActorHp(actor);
   if (!hp) {
+    console.log("ATDE trail | no hp, bailing");
     PRE_MOVE.delete(tokenDoc.id);
     return;
   }
 
   const state = computeState(hp.value, hp.max);
+  console.log(`ATDE trail | hp=${hp.value}/${hp.max} isBleeding=${state.isBleeding} isDead=${state.isDead}`);
   if (!state.isBleeding || state.isDead) {
     PRE_MOVE.delete(tokenDoc.id);
     return;
@@ -87,6 +90,7 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
 
   const { color: colorOverride, suppressBlood } = getBloodColorForActor(actor, getSelectedPreset());
   if (suppressBlood) {
+    console.log("ATDE trail | suppressBlood, bailing");
     PRE_MOVE.delete(tokenDoc.id);
     return;
   }
@@ -94,13 +98,17 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
   const prev = PRE_MOVE.get(tokenDoc.id);
   PRE_MOVE.delete(tokenDoc.id);
 
+  console.log(`ATDE trail | prev=${JSON.stringify(prev)} newPos=${tokenDoc.x},${tokenDoc.y}`);
+
   if (!prev) return;
 
   // Sparse marks at movement origin (existing system)
   maybeDropBloodTrail(tokenDoc, prev.x, prev.y, colorOverride);
 
   // Smears + drips along full movement path (new system)
-  if (game.settings.get(MODULE_ID, "enableBloodPathTrails")) {
+  const pathEnabled = game.settings.get(MODULE_ID, "enableBloodPathTrails");
+  console.log(`ATDE trail | enableBloodPathTrails=${pathEnabled}`);
+  if (pathEnabled) {
     dropPathTrail(tokenDoc, prev, colorOverride);
   }
 });

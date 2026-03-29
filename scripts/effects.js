@@ -374,13 +374,13 @@ function destroyBloodTrailGraphic(tokenId, graphic) {
 // ---------------------------------------------------------------------------
 
 export function dropPathTrail(tokenDoc, prev, colorOverride) {
-  if (!canvas?.ready) return;
+  if (!canvas?.ready) { console.log("ATDE dropPathTrail | canvas not ready"); return; }
 
   const token = tokenDoc?.object;
-  if (!token || token.destroyed) return;
+  if (!token || token.destroyed) { console.log("ATDE dropPathTrail | no token object"); return; }
 
   const layer = canvas.tokens;
-  if (!layer) return;
+  if (!layer) { console.log("ATDE dropPathTrail | no token layer"); return; }
 
   const halfW = token.w / 2;
   const halfH = token.h / 2;
@@ -399,8 +399,11 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
   const spacing  = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
   const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
 
+  console.log(`ATDE dropPathTrail | points=${JSON.stringify(points)} gridSize=${gridSize} spacing=${spacing}`);
+
   const visitedKeys  = new Set(); // deduplicate grid squares across all segments
   let   lastMarkPos  = null;      // for spacing check between consecutive marks
+  let   totalMarks   = 0;
 
   for (let seg = 0; seg < points.length - 1; seg++) {
     const p0    = points[seg];
@@ -410,6 +413,7 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
     const dist  = Math.hypot(dx, dy);
     const angle = Math.atan2(dy, dx);
 
+    console.log(`ATDE dropPathTrail | seg ${seg}: dist=${dist.toFixed(1)}`);
     if (dist < 1) continue;
 
     // Walk at half-grid steps to collect every grid square this segment crosses
@@ -443,8 +447,10 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
 
       _placePathMark(layer, mx, my, angle, colorOverride, tokenDoc, lifetime);
       lastMarkPos = { x: cx, y: cy };
+      totalMarks++;
     }
   }
+  console.log(`ATDE dropPathTrail | placed ${totalMarks} marks`);
 }
 
 function _placePathMark(layer, x, y, angle, colorOverride, tokenDoc, lifetime) {
