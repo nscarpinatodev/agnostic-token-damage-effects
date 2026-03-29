@@ -53,13 +53,15 @@ Hooks.on("preUpdateToken", (tokenDoc, change) => {
   if (!token) return;
 
   // Always capture current position for sparse trail / blood pool use.
-  PRE_MOVE.set(tokenDoc.id, { x: token.x, y: token.y });
+  // Use tokenDoc.x/y (authoritative document values) — token.x/y on the
+  // canvas display object can lag behind the settled position.
+  PRE_MOVE.set(tokenDoc.id, { x: tokenDoc.x, y: tokenDoc.y });
 
   // For path trails: only store on the FIRST update of a movement sequence.
   // updateToken will advance this forward after each real segment is processed.
   if (!PATH_TRAIL_PREV.has(tokenDoc.id)) {
-    PATH_TRAIL_PREV.set(tokenDoc.id, { x: token.x, y: token.y });
-    console.log(`ATDE preUpdate | captured path trail start ${token.x.toFixed(0)},${token.y.toFixed(0)}`);
+    PATH_TRAIL_PREV.set(tokenDoc.id, { x: tokenDoc.x, y: tokenDoc.y });
+    console.log(`ATDE preUpdate | captured path trail start ${tokenDoc.x.toFixed(0)},${tokenDoc.y.toFixed(0)}`);
   }
 });
 

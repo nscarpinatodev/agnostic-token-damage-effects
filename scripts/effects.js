@@ -400,14 +400,18 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
   if (dist < 1) return;
 
   const angle    = Math.atan2(dy, dx);
-  const numMarks = Math.max(1, Math.floor(dist / spacing));
+  const gridSize = canvas.grid?.size ?? 100;
 
-  console.log(`ATDE dropPathTrail | from=${fromX.toFixed(0)},${fromY.toFixed(0)} to=${toX.toFixed(0)},${toY.toFixed(0)} dist=${dist.toFixed(1)} marks=${numMarks}`);
+  // 1 mark per grid square traversed (rounded), minimum 1.
+  // spacing is used only as a jitter radius, not to count marks.
+  const numMarks = Math.max(1, Math.round(dist / gridSize));
+
+  console.log(`ATDE dropPathTrail | from=${fromX.toFixed(0)},${fromY.toFixed(0)} to=${toX.toFixed(0)},${toY.toFixed(0)} dist=${dist.toFixed(1)} gridSize=${gridSize} marks=${numMarks}`);
 
   for (let i = 0; i < numMarks; i++) {
     const t  = Math.random();
-    const px = fromX + dx * t + rand(-6, 6);
-    const py = fromY + dy * t + rand(-6, 6);
+    const px = fromX + dx * t + rand(-spacing * 0.2, spacing * 0.2);
+    const py = fromY + dy * t + rand(-spacing * 0.2, spacing * 0.2);
     _placePathMark(layer, px, py, angle, colorOverride, tokenDoc, lifetime);
   }
 }
