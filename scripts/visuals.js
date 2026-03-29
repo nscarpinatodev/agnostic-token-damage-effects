@@ -63,7 +63,7 @@ export async function applySaturation(token, state) {
   }
 
   if (!success) {
-    console.warn("Health Visualizer | Could not apply Token Magic desaturation filter", token);
+    console.warn("Agnostic Token Damage Effects | Could not apply Token Magic desaturation filter", token);
   }
 }
 

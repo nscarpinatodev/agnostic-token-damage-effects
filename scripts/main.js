@@ -14,14 +14,14 @@ import {
 const PRE_MOVE = new Map();
 
 Hooks.once("init", () => {
-  console.log("Health Visualizer loading");
+  console.log("Agnostic Token Damage Effects loading");
   registerSettings(refreshAllVisibleTokens);
 });
 
 Hooks.once("ready", () => {
   if (!tokenMagicAvailable()) {
-    ui.notifications?.error("Health Visualizer requires Token Magic FX for desaturation. Enable Token Magic FX and reload.");
-    console.error("Health Visualizer | Token Magic FX is not active.");
+    ui.notifications?.error("Agnostic Token Damage Effects requires Token Magic FX for desaturation. Enable Token Magic FX and reload.");
+    console.error("Agnostic Token Damage Effects | Token Magic FX is not active.");
   }
 });
 
