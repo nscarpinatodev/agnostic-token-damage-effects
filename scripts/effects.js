@@ -373,7 +373,8 @@ function destroyBloodTrailGraphic(tokenId, graphic) {
 // Blood path trails — smears + drips along full movement path
 // ---------------------------------------------------------------------------
 
-export function dropPathTrail(tokenDoc, prev, colorOverride) {
+// waypoints is an array of TokenMeasuredMovementWaypoint ({x, y} top-left).
+export function dropPathTrail(tokenDoc, waypoints, colorOverride) {
   if (!canvas?.ready) return;
 
   const token = tokenDoc?.object;
@@ -382,37 +383,36 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
   const layer = canvas.tokens;
   if (!layer) return;
 
-  const halfW  = token.w / 2;
-  const halfH  = token.h / 2;
-
+  const halfW    = token.w / 2;
+  const halfH    = token.h / 2;
+  const gridSize = canvas.grid?.size ?? 100;
   const spacing  = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
   const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
 
-  // prev is the segment start (token top-left); convert to center coords
-  const fromX = prev.x + halfW;
-  const fromY = prev.y + halfH;
-  const toX   = tokenDoc.x + halfW;
-  const toY   = tokenDoc.y + halfH;
-  const dx    = toX - fromX;
-  const dy    = toY - fromY;
-  const dist  = Math.hypot(dx, dy);
+  // Walk each consecutive pair of waypoints as a segment.
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const fromX = waypoints[i].x + halfW;
+    const fromY = waypoints[i].y + halfH;
+    const toX   = waypoints[i + 1].x + halfW;
+    const toY   = waypoints[i + 1].y + halfH;
+    const dx    = toX - fromX;
+    const dy    = toY - fromY;
+    const dist  = Math.hypot(dx, dy);
 
-  if (dist < 1) return;
+    if (dist < 1) continue;
 
-  const angle    = Math.atan2(dy, dx);
-  const gridSize = canvas.grid?.size ?? 100;
+    const angle    = Math.atan2(dy, dx);
+    // 1 mark per grid square traversed, minimum 1
+    const numMarks = Math.max(1, Math.round(dist / gridSize));
 
-  // 1 mark per grid square traversed (rounded), minimum 1.
-  // spacing is used only as a jitter radius, not to count marks.
-  const numMarks = Math.max(1, Math.round(dist / gridSize));
+    console.log(`ATDE dropPathTrail | seg ${i}: from=${fromX.toFixed(0)},${fromY.toFixed(0)} to=${toX.toFixed(0)},${toY.toFixed(0)} dist=${dist.toFixed(1)} marks=${numMarks}`);
 
-  console.log(`ATDE dropPathTrail | from=${fromX.toFixed(0)},${fromY.toFixed(0)} to=${toX.toFixed(0)},${toY.toFixed(0)} dist=${dist.toFixed(1)} gridSize=${gridSize} marks=${numMarks}`);
-
-  for (let i = 0; i < numMarks; i++) {
-    const t  = Math.random();
-    const px = fromX + dx * t + rand(-spacing * 0.2, spacing * 0.2);
-    const py = fromY + dy * t + rand(-spacing * 0.2, spacing * 0.2);
-    _placePathMark(layer, px, py, angle, colorOverride, tokenDoc, lifetime);
+    for (let m = 0; m < numMarks; m++) {
+      const t  = Math.random();
+      const px = fromX + dx * t + rand(-spacing * 0.2, spacing * 0.2);
+      const py = fromY + dy * t + rand(-spacing * 0.2, spacing * 0.2);
+      _placePathMark(layer, px, py, angle, colorOverride, tokenDoc, lifetime);
+    }
   }
 }
 
