@@ -1,5 +1,10 @@
 import { MODULE_ID, TMFX_FILTER_ID, tokenMagicAvailable } from "./presets.js";
 
+function hexToNumber(value) {
+  if (typeof value !== "string") return 0x8b0000;
+  return Number.parseInt(value.replace("#", ""), 16) || 0x8b0000;
+}
+
 export function computeState(hpValue, hpMax) {
   const ratioRaw = Math.clamp(hpValue / hpMax, 0, 1);
   const stepped = game.settings.get(MODULE_ID, "useSteppedSaturation");
@@ -42,7 +47,7 @@ async function tryDelete(target, filterId) {
   }
 }
 
-export async function applySaturation(token, state) {
+export async function applySaturation(token, state, tintColor = null, applyTint = true) {
   const satEnabled  = game.settings.get(MODULE_ID, "enableSaturation");
   const tintEnabled = game.settings.get(MODULE_ID, "enableDamageTint");
 
@@ -52,15 +57,40 @@ export async function applySaturation(token, state) {
   }
   if (!tokenMagicAvailable() || !token) return;
 
-  // damage = 0 at full HP, 1 at 0 HP
-  const damage = 1 - state.ratioRaw;
+  let red = 1, green = 1, blue = 1;
+
+  if (applyTint && tintEnabled) {
+    // damage = 0 at full HP, 1 at 0 HP
+    const damage = 1 - state.ratioRaw;
+
+    // Resolve the tint color — creature-type color, or fall back to global blood color
+    const color = tintColor ?? hexToNumber(game.settings.get(MODULE_ID, "bloodColor"));
+
+    // Extract normalised RGB channels (0–1) and find the dominant channel
+    const rRaw = ((color >> 16) & 0xff) / 255;
+    const gRaw = ((color >> 8)  & 0xff) / 255;
+    const bRaw = ( color        & 0xff) / 255;
+    const maxC = Math.max(rRaw, gRaw, bRaw);
+
+    if (maxC > 0) {
+      // Normalise so the dominant channel = 1; others scale proportionally
+      const rN = rRaw / maxC;
+      const gN = gRaw / maxC;
+      const bN = bRaw / maxC;
+
+      // Dominant channels are boosted toward 1.8; absent channels are pulled toward 0.3
+      // Formula: 1 + (norm * 0.8 - (1 - norm) * 0.7) * damage
+      red   = 1 + (rN * 0.8 - (1 - rN) * 0.7) * damage;
+      green = 1 + (gN * 0.8 - (1 - gN) * 0.7) * damage;
+      blue  = 1 + (bN * 0.8 - (1 - bN) * 0.7) * damage;
+    }
+  }
+
   const params = [{
     filterType: "adjustment",
     filterId: TMFX_FILTER_ID,
     saturation: satEnabled ? state.saturation : 1,
-    red:   tintEnabled ? 1 + damage * 0.50 : 1,
-    green: tintEnabled ? 1 - damage * 0.40 : 1,
-    blue:  tintEnabled ? 1 - damage * 0.40 : 1
+    red, green, blue
   }];
 
   const targets = [token, token.document, [token], [token.document]].filter(Boolean);

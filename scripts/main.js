@@ -146,7 +146,8 @@ async function applyStateToToken(tokenDoc) {
   const { color: colorOverride, suppressBlood } = getBloodColorForActor(actor, getSelectedPreset());
 
   await applyAlpha(tokenDoc, state.alpha);
-  await applySaturation(token, state);
+  // suppressBlood = true for elementals: desaturate normally, skip the blood tint
+  await applySaturation(token, state, colorOverride, !suppressBlood);
 
   if (suppressBlood) {
     removeBleedingOverlay(tokenDoc.id);
