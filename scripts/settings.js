@@ -1,4 +1,5 @@
 import { MODULE_ID, HP_PRESETS } from "./presets.js";
+import { TypeColorsConfig } from "./type-colors-config.js";
 
 export function registerSettings(refreshAllVisibleTokens) {
   game.settings.register(MODULE_ID, "hpPreset", {
@@ -30,6 +31,15 @@ export function registerSettings(refreshAllVisibleTokens) {
     type: String,
     default: "",
     onChange: () => refreshAllVisibleTokens()
+  });
+
+  game.settings.register(MODULE_ID, "customCreatureTypePath", {
+    name: "Custom Creature Type Path",
+    hint: "Data path for creature type on the Custom HP preset. Returns a string or array. Example: system.details.type.value",
+    scope: "world",
+    config: true,
+    type: String,
+    default: ""
   });
 
   game.settings.register(MODULE_ID, "enableSaturation", {
@@ -74,13 +84,29 @@ export function registerSettings(refreshAllVisibleTokens) {
   });
 
   game.settings.register(MODULE_ID, "bloodColor", {
-    name: "Blood Color",
-    hint: "Hex color used for drips, trails, and pools.",
+    name: "Blood Color (Global Default)",
+    hint: "Default hex color used for drips, trails, and pools. Per-type colors can be configured below.",
     scope: "world",
     config: true,
     type: String,
     default: "#8b0000",
     onChange: () => refreshAllVisibleTokens()
+  });
+
+  game.settings.registerMenu(MODULE_ID, "creatureTypeColorsMenu", {
+    name: "Blood Colors by Creature Type",
+    label: "Configure",
+    hint: "Customize blood colors based on creature type (undead, construct, etc.).",
+    icon: "fas fa-tint",
+    type: TypeColorsConfig,
+    restricted: true
+  });
+
+  game.settings.register(MODULE_ID, "creatureTypeColors", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {}
   });
 
   game.settings.register(MODULE_ID, "bleedingDropCount", {

@@ -15,27 +15,35 @@ export const HP_PRESETS = {
   dnd4e: {
     label: "D&D 4e",
     changedPaths: ["system.attributes.hp.value", "system.attributes.hp.max"],
-    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max")
+    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max"),
+    typeResolver: actor =>
+      foundry.utils.getProperty(actor, "system.details.type.value") ??
+      foundry.utils.getProperty(actor, "system.details.type") ?? null
   },
   dnd5e: {
     label: "D&D 5e",
     changedPaths: ["system.attributes.hp.value", "system.attributes.hp.max"],
-    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max")
+    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max"),
+    typeResolver: actor => foundry.utils.getProperty(actor, "system.details.type.value") ?? null
   },
   pf1e: {
     label: "Pathfinder 1e",
     changedPaths: ["system.attributes.hp.value", "system.attributes.hp.max"],
-    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max")
+    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max"),
+    typeResolver: actor => foundry.utils.getProperty(actor, "system.attributes.creatureType") ?? null
   },
   pf2e: {
     label: "Pathfinder 2e",
     changedPaths: ["system.attributes.hp.value", "system.attributes.hp.max"],
-    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max")
+    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max"),
+    // Returns an array of trait strings; creature-types.js handles priority resolution
+    typeResolver: actor => foundry.utils.getProperty(actor, "system.traits.value") ?? null
   },
   sf2e: {
     label: "Starfinder 2e",
     changedPaths: ["system.attributes.hp.value", "system.attributes.hp.max"],
-    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max")
+    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max"),
+    typeResolver: actor => foundry.utils.getProperty(actor, "system.traits.value") ?? null
   },
   deltagreen: {
     label: "Delta Green",
@@ -47,7 +55,8 @@ export const HP_PRESETS = {
     ],
     resolver: actor =>
       resolveByPaths(actor, "system.health.hp.value", "system.health.hp.max") ??
-      resolveByPaths(actor, "system.statistics.health.value", "system.statistics.health.max")
+      resolveByPaths(actor, "system.statistics.health.value", "system.statistics.health.max"),
+    typeResolver: _actor => null  // Delta Green is human-focused; no creature type field
   },
   dcc: {
     label: "Dungeon Crawl Classics",
@@ -60,19 +69,22 @@ export const HP_PRESETS = {
         return { value: Number(hp.value), max: Number(hp.max) };
       }
       return null;
-    }
+    },
+    typeResolver: _actor => null  // DCC type field location unverified; falls back to global
   },
   shadowdark: {
     label: "Shadowdark",
     changedPaths: ["system.attributes.hp.value", "system.attributes.hp.max", "system.hp.value", "system.hp.max"],
     resolver: actor =>
       resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max") ??
-      resolveByPaths(actor, "system.hp.value", "system.hp.max")
+      resolveByPaths(actor, "system.hp.value", "system.hp.max"),
+    typeResolver: _actor => null  // Shadowdark type field location unverified; falls back to global
   },
   blackflag: {
     label: "Tales of the Valiant / Black Flag",
     changedPaths: ["system.attributes.hp.value", "system.attributes.hp.max"],
-    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max")
+    resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max"),
+    typeResolver: actor => foundry.utils.getProperty(actor, "system.details.type.value") ?? null
   },
   custom: {
     label: "Custom",
@@ -82,6 +94,11 @@ export const HP_PRESETS = {
       const max = game.settings.get(MODULE_ID, "customHpMaxPath")?.trim();
       if (!current || !max) return null;
       return resolveByPaths(actor, current, max);
+    },
+    typeResolver: actor => {
+      const path = game.settings.get(MODULE_ID, "customCreatureTypePath")?.trim();
+      if (!path) return null;
+      return foundry.utils.getProperty(actor, path) ?? null;
     }
   }
 };

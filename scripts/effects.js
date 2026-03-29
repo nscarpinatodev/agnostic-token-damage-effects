@@ -20,8 +20,8 @@ function getBloodColor() {
   return hexToNumber(game.settings.get(MODULE_ID, "bloodColor"));
 }
 
-function getBloodColors() {
-  const primary = getBloodColor();
+function getBloodColors(overrideColor = null) {
+  const primary = overrideColor ?? getBloodColor();
   return { primary, secondary: tint(primary, 0.72) };
 }
 
@@ -87,8 +87,13 @@ function buildNoiseSprite(halfW, halfH) {
   return sprite;
 }
 
-export function ensureBleedingOverlay(token) {
-  if (RUNTIME.bleeding.has(token.id)) return;
+export function ensureBleedingOverlay(token, colorOverride = null) {
+  // If overlay exists, just update its stored color so next drop spawn picks it up
+  const existing = RUNTIME.bleeding.get(token.id);
+  if (existing) {
+    existing._hvColorOverride = colorOverride;
+    return;
+  }
 
   const halfW  = token.w / 2;
   const halfH  = token.h / 2;
@@ -138,10 +143,11 @@ export function ensureBleedingOverlay(token) {
     drops.push(drop);
   }
 
-  container._hvDrops   = drops;
-  container._hvHalfW   = halfW;
-  container._hvHalfH   = halfH;
-  container._hvTexSize = texSize;
+  container._hvDrops        = drops;
+  container._hvHalfW        = halfW;
+  container._hvHalfH        = halfH;
+  container._hvTexSize      = texSize;
+  container._hvColorOverride = colorOverride;
 
   token.addChild(container);
   RUNTIME.bleeding.set(token.id, container);
@@ -179,7 +185,7 @@ function animateBleedingOverlay(tokenId, token) {
       current._noiseSprite.y += 0.07;
     }
 
-    const colors = getBloodColors();
+    const colors = getBloodColors(current._hvColorOverride);
     const drops  = current._hvDrops;
 
     for (let i = drops.length - 1; i >= 0; i--) {
@@ -218,7 +224,7 @@ export function clearRuntimeEffects(tokenId) {
 // Blood trails
 // ---------------------------------------------------------------------------
 
-export function maybeDropBloodTrail(tokenDoc, oldX, oldY) {
+export function maybeDropBloodTrail(tokenDoc, oldX, oldY, colorOverride = null) {
   if (!canvas?.ready) return;
   if (!game.settings.get(MODULE_ID, "enableBloodTrails")) return;
 
@@ -237,7 +243,7 @@ export function maybeDropBloodTrail(tokenDoc, oldX, oldY) {
     if (Math.hypot(dx, dy) < spacing) return;
   }
 
-  createBloodTrailMark(token, oldX, oldY);
+  createBloodTrailMark(token, oldX, oldY, colorOverride);
   RUNTIME.lastTrailDrop.set(token.id, { x: centerX, y: centerY });
 }
 
@@ -256,7 +262,7 @@ export function clearBloodTrails(tokenId) {
   RUNTIME.lastTrailDrop.delete(tokenId);
 }
 
-function createBloodTrailMark(token, oldX, oldY) {
+function createBloodTrailMark(token, oldX, oldY, colorOverride = null) {
   const layer = canvas.tokens;
   if (!layer) return;
 
@@ -266,6 +272,7 @@ function createBloodTrailMark(token, oldX, oldY) {
   g.y = oldY + (token.h / 2) + rand(-5, 5);
   g.alpha = 0.62;
 
+  g._hvColorOverride = colorOverride;
   drawBloodTrailMark(g);
   layer.addChildAt(g, 0);
 
@@ -281,7 +288,7 @@ function createBloodTrailMark(token, oldX, oldY) {
 }
 
 function drawBloodTrailMark(g) {
-  const bloodColor = getBloodColor();
+  const bloodColor = g._hvColorOverride ?? getBloodColor();
   const darkBlood  = tint(bloodColor, 0.65);
   const baseRadius = rand(4, 9);
 
@@ -366,7 +373,7 @@ function destroyBloodTrailGraphic(tokenId, graphic) {
 // Death blood pool
 // ---------------------------------------------------------------------------
 
-export function ensureBloodPool(token) {
+export function ensureBloodPool(token, colorOverride = null) {
   if (!canvas?.ready) return;
   if (RUNTIME.bloodPools.has(token.id)) return;
 
@@ -396,10 +403,11 @@ export function ensureBloodPool(token) {
     });
   }
 
-  g._hvArms        = arms;
-  g._hvBaseRadius  = baseRadius;
-  g._hvHighlightX  = rand(-0.22, 0.08);
-  g._hvHighlightY  = rand(-0.18, 0.04);
+  g._hvArms          = arms;
+  g._hvBaseRadius    = baseRadius;
+  g._hvHighlightX    = rand(-0.22, 0.08);
+  g._hvHighlightY    = rand(-0.18, 0.04);
+  g._hvColorOverride = colorOverride;
 
   drawBloodPool(g, token, g._hvProgress);
   layer.addChildAt(g, 0);
@@ -476,7 +484,7 @@ function startBloodPoolDarkening(tokenId, duration) {
 }
 
 function drawBloodPool(g, token, progress = 1) {
-  const bloodColor = getBloodColor();
+  const bloodColor = g._hvColorOverride ?? getBloodColor();
   const darkBlood  = tint(bloodColor, 0.65);
   const baseRadius = g._hvBaseRadius ?? Math.max(token.w, token.h) * 0.45;
 

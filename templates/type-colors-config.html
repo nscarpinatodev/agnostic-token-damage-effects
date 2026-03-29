@@ -1,0 +1,34 @@
+<form class="atde-type-colors-form">
+  <p class="notes">
+    Set a custom blood color for each creature type. Leaving a type at its default will use
+    the built-in color for that type, or the global blood color if no default is defined.
+  </p>
+
+  {{#each types}}
+  <div class="form-group">
+    <label>{{label}}</label>
+    {{#if suppress}}
+    <div class="form-fields">
+      <em class="hint">Blood effects suppressed — desaturation still applies.</em>
+    </div>
+    {{else}}
+    <div class="form-fields">
+      <input type="color" name="color_{{key}}" value="{{color}}">
+      <button type="button" class="reset-type-color" data-key="{{key}}" data-default="{{defaultColor}}"
+              title="Reset to default">
+        <i class="fas fa-undo"></i>
+      </button>
+    </div>
+    {{/if}}
+  </div>
+  {{/each}}
+
+  <footer class="sheet-footer flexrow">
+    <button type="button" class="reset-all-colors">
+      <i class="fas fa-undo"></i> Reset All
+    </button>
+    <button type="submit">
+      <i class="fas fa-save"></i> Save
+    </button>
+  </footer>
+</form>

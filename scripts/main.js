@@ -1,7 +1,8 @@
-import { MODULE_ID, tokenMagicAvailable } from "./presets.js";
+import { MODULE_ID, tokenMagicAvailable, getSelectedPreset } from "./presets.js";
 import { registerSettings } from "./settings.js";
 import { hpRelevantChange, getActorHp } from "./hp-resolver.js";
 import { computeState, applyAlpha, applySaturation, clearVisualFilter } from "./visuals.js";
+import { getBloodColorForActor } from "./creature-types.js";
 import {
   ensureBleedingOverlay,
   removeBleedingOverlay,
@@ -74,11 +75,17 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
     return;
   }
 
+  const { color: colorOverride, suppressBlood } = getBloodColorForActor(actor, getSelectedPreset());
+  if (suppressBlood) {
+    PRE_MOVE.delete(tokenDoc.id);
+    return;
+  }
+
   const prev = PRE_MOVE.get(tokenDoc.id);
   PRE_MOVE.delete(tokenDoc.id);
 
   if (!prev) return;
-  maybeDropBloodTrail(tokenDoc, prev.x, prev.y);
+  maybeDropBloodTrail(tokenDoc, prev.x, prev.y, colorOverride);
 });
 
 Hooks.on("updateActor", async (actor, change) => {
@@ -136,12 +143,19 @@ async function applyStateToToken(tokenDoc) {
   }
 
   const state = computeState(hp.value, hp.max);
+  const { color: colorOverride, suppressBlood } = getBloodColorForActor(actor, getSelectedPreset());
 
   await applyAlpha(tokenDoc, state.alpha);
   await applySaturation(token, state);
 
+  if (suppressBlood) {
+    removeBleedingOverlay(tokenDoc.id);
+    removeBloodPool(token.id);
+    return;
+  }
+
   if (game.settings.get(MODULE_ID, "enableBleedingOverlay")) {
-    if (state.isBleeding) ensureBleedingOverlay(token);
+    if (state.isBleeding) ensureBleedingOverlay(token, colorOverride);
     else removeBleedingOverlay(tokenDoc.id);
   } else {
     removeBleedingOverlay(tokenDoc.id);
@@ -153,7 +167,7 @@ async function applyStateToToken(tokenDoc) {
     if (state.isDead && !wasDead) {
       removeBleedingOverlay(tokenDoc.id);
       if (game.user.isGM) await actor.setFlag(MODULE_ID, "wasDead", true);
-      ensureBloodPool(token);
+      ensureBloodPool(token, colorOverride);
     } else if (!state.isDead && wasDead) {
       if (game.user.isGM) await actor.setFlag(MODULE_ID, "wasDead", false);
       removeBloodPool(token.id);
