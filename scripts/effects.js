@@ -4,7 +4,8 @@ export const RUNTIME = {
   bleeding: new Map(),
   bloodPools: new Map(),
   bloodTrails: new Map(),
-  lastTrailDrop: new Map()
+  lastTrailDrop: new Map(),
+  lastPathDrop: new Map()
 };
 
 function rand(min, max) {
@@ -260,6 +261,7 @@ export function clearBloodTrails(tokenId) {
     RUNTIME.bloodTrails.delete(tokenId);
   }
   RUNTIME.lastTrailDrop.delete(tokenId);
+  RUNTIME.lastPathDrop.delete(tokenId);
 }
 
 function createBloodTrailMark(token, oldX, oldY, colorOverride = null) {
@@ -374,83 +376,41 @@ function destroyBloodTrailGraphic(tokenId, graphic) {
 // ---------------------------------------------------------------------------
 
 export function dropPathTrail(tokenDoc, prev, colorOverride) {
-  if (!canvas?.ready) { console.log("ATDE dropPathTrail | canvas not ready"); return; }
+  if (!canvas?.ready) return;
 
   const token = tokenDoc?.object;
-  if (!token || token.destroyed) { console.log("ATDE dropPathTrail | no token object"); return; }
+  if (!token || token.destroyed) return;
 
   const layer = canvas.tokens;
-  if (!layer) { console.log("ATDE dropPathTrail | no token layer"); return; }
+  if (!layer) return;
 
   const halfW = token.w / 2;
   const halfH = token.h / 2;
 
-  // Build path as token centers: start → captured waypoints → end.
-  // Use tokenDoc.x/y (the updated document values) rather than token.x/y (the
-  // canvas display object), which may not have been repositioned yet when this
-  // hook fires.
-  const points = [
-    { x: prev.x + halfW, y: prev.y + halfH },
-    ...(Array.isArray(prev.waypoints) ? prev.waypoints.map(wp => ({ x: wp.x, y: wp.y })) : []),
-    { x: tokenDoc.x + halfW, y: tokenDoc.y + halfH }
-  ];
+  // updateToken fires for every incremental position update during a drag,
+  // so prev→new is a tiny step each call. Place one mark at prev with the
+  // travel direction as the smear angle, subject to a spacing check.
+  const fromX = prev.x + halfW;
+  const fromY = prev.y + halfH;
+  const toX   = tokenDoc.x + halfW;
+  const toY   = tokenDoc.y + halfH;
 
-  const gridSize = canvas.grid?.size ?? 100;
-  const spacing  = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
+  const dx   = toX - fromX;
+  const dy   = toY - fromY;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 1) return;
+
+  const angle   = Math.atan2(dy, dx);
+  const spacing = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
   const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
 
-  console.log(`ATDE dropPathTrail | points=${JSON.stringify(points)} gridSize=${gridSize} spacing=${spacing}`);
+  const last = RUNTIME.lastPathDrop.get(token.id);
+  if (last && Math.hypot(fromX - last.x, fromY - last.y) < spacing) return;
 
-  const visitedKeys  = new Set(); // deduplicate grid squares across all segments
-  let   lastMarkPos  = null;      // for spacing check between consecutive marks
-  let   totalMarks   = 0;
-
-  for (let seg = 0; seg < points.length - 1; seg++) {
-    const p0    = points[seg];
-    const p1    = points[seg + 1];
-    const dx    = p1.x - p0.x;
-    const dy    = p1.y - p0.y;
-    const dist  = Math.hypot(dx, dy);
-    const angle = Math.atan2(dy, dx);
-
-    console.log(`ATDE dropPathTrail | seg ${seg}: dist=${dist.toFixed(1)}`);
-    if (dist < 1) continue;
-
-    // Walk at half-grid steps to collect every grid square this segment crosses
-    const steps      = Math.max(1, Math.ceil(dist / (gridSize * 0.5)));
-    const segSquares = [];
-
-    for (let i = 0; i <= steps; i++) {
-      const t   = i / steps;
-      const px  = p0.x + dx * t;
-      const py  = p0.y + dy * t;
-      const gx  = Math.floor(px / gridSize) * gridSize;
-      const gy  = Math.floor(py / gridSize) * gridSize;
-      const key = `${gx},${gy}`;
-      if (!visitedKeys.has(key)) {
-        visitedKeys.add(key);
-        segSquares.push({ gx, gy });
-      }
-    }
-
-    // Place a mark in each newly-visited square, subject to spacing ±25%
-    for (const { gx, gy } of segSquares) {
-      const cx = gx + gridSize / 2;
-      const cy = gy + gridSize / 2;
-
-      const threshold = spacing * (0.75 + Math.random() * 0.5);
-      if (lastMarkPos && Math.hypot(cx - lastMarkPos.x, cy - lastMarkPos.y) < threshold) continue;
-
-      // Position within square: center ± 18% jitter
-      const mx = cx + rand(-gridSize * 0.18, gridSize * 0.18);
-      const my = cy + rand(-gridSize * 0.18, gridSize * 0.18);
-
-      _placePathMark(layer, mx, my, angle, colorOverride, tokenDoc, lifetime);
-      lastMarkPos = { x: cx, y: cy };
-      totalMarks++;
-    }
-  }
-  console.log(`ATDE dropPathTrail | placed ${totalMarks} marks`);
+  const mx = fromX + rand(-6, 6);
+  const my = fromY + rand(-6, 6);
+  _placePathMark(layer, mx, my, angle, colorOverride, tokenDoc, lifetime);
+  RUNTIME.lastPathDrop.set(token.id, { x: fromX, y: fromY });
 }
 
 function _placePathMark(layer, x, y, angle, colorOverride, tokenDoc, lifetime) {
