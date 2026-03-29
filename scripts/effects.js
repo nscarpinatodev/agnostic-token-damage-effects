@@ -49,11 +49,11 @@ function spawnDrop(token, colors, radius, texSize) {
   g.endFill();
 
   // Spawn at a random X within the token, at the top of the circle
-  g._speed   = 0.6 + Math.random() * 1.3;
+  g._speed   = 0.25 + Math.random() * 0.45;
   g._maxFall = radius * (1.6 + Math.random() * 0.8);
   g.x        = rand(-radius * 0.85, radius * 0.85);
   g.y        = -radius;
-  g.rotation = Math.PI / 2;   // point downward
+  g.rotation = 0;   // teardrop already points downward (fat end at bottom)
   g.alpha    = 0.9 + Math.random() * 0.1;
 
   return g;
@@ -274,20 +274,42 @@ function createBloodTrailMark(token, oldX, oldY) {
 
 function drawBloodTrailMark(g) {
   const bloodColor = getBloodColor();
-  const darkBlood  = tint(bloodColor, 0.75);
+  const darkBlood  = tint(bloodColor, 0.65);
+  const baseRadius = rand(4, 9);
 
   g.clear();
-  g.beginFill(darkBlood, 0.45);
-  g.drawEllipse(0, 0, rand(4, 7), rand(3, 5.5));
+
+  // Small organic blob using the same radial bezier approach as the death pool
+  const armCount = 10 + Math.floor(rand(0, 6));
+  const pts = [];
+  for (let i = 0; i < armCount; i++) {
+    const angle  = (i / armCount) * Math.PI * 2 + rand(-0.15, 0.15);
+    const isSpike = Math.random() < 0.30;
+    const r      = isSpike ? baseRadius * rand(1.5, 2.4) : baseRadius * rand(0.4, 1.0);
+    pts.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+  }
+
+  const n = pts.length;
+
+  g.beginFill(darkBlood, 0.5);
+  g.moveTo((pts[n - 1].x * 1.1 + pts[0].x * 1.1) / 2, (pts[n - 1].y * 1.1 + pts[0].y * 1.1) / 2);
+  for (let i = 0; i < n; i++) {
+    const p0x = pts[i].x * 1.1,           p0y = pts[i].y * 1.1;
+    const p1x = pts[(i + 1) % n].x * 1.1, p1y = pts[(i + 1) % n].y * 1.1;
+    g.quadraticCurveTo(p0x, p0y, (p0x + p1x) / 2, (p0y + p1y) / 2);
+  }
+  g.closePath();
   g.endFill();
 
-  for (let i = 0; i < 3; i++) {
-    const angle = rand(0, Math.PI * 2);
-    const dist  = rand(2, 5);
-    g.beginFill(bloodColor, 0.3);
-    g.drawCircle(Math.cos(angle) * dist, Math.sin(angle) * dist, rand(0.8, 1.8));
-    g.endFill();
+  g.beginFill(bloodColor, 0.75);
+  g.moveTo((pts[n - 1].x + pts[0].x) / 2, (pts[n - 1].y + pts[0].y) / 2);
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[i];
+    const p1 = pts[(i + 1) % n];
+    g.quadraticCurveTo(p0.x, p0.y, (p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
   }
+  g.closePath();
+  g.endFill();
 }
 
 function fadeOutBloodTrailMark(tokenId, graphic, duration = 1200) {
@@ -366,18 +388,7 @@ export function ensureBloodPool(token) {
     });
   }
 
-  // Satellite droplets near the tips of spike arms
-  const satellites = arms
-    .filter(a => a.maxRadius > baseRadius * 1.3)
-    .map(a => ({
-      angle:         a.angle + rand(-0.4, 0.4),
-      dist:          a.maxRadius * rand(0.75, 1.05),
-      size:          rand(3, 9),
-      startProgress: Math.min(0.95, a.startProgress + rand(0.15, 0.35))
-    }));
-
   g._hvArms        = arms;
-  g._hvSatellites  = satellites;
   g._hvBaseRadius  = baseRadius;
   g._hvHighlightX  = rand(-0.22, 0.08);
   g._hvHighlightY  = rand(-0.18, 0.04);
@@ -466,15 +477,6 @@ function drawBloodPool(g, token, progress = 1) {
   }
   g.closePath();
   g.endFill();
-
-  // Satellite droplets at spike tips
-  for (const sat of g._hvSatellites ?? []) {
-    const t = Math.max(0, Math.min(1, (progress - sat.startProgress) / (1.0 - sat.startProgress)));
-    if (t <= 0) continue;
-    g.beginFill(darkBlood, 0.65 * t);
-    g.drawCircle(Math.cos(sat.angle) * sat.dist * t, Math.sin(sat.angle) * sat.dist * t, sat.size * t);
-    g.endFill();
-  }
 
   // Wet highlight
   const hx = (g._hvHighlightX ?? -0.15) * baseRadius * 0.45 * progress;
