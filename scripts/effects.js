@@ -4,8 +4,7 @@ export const RUNTIME = {
   bleeding: new Map(),
   bloodPools: new Map(),
   bloodTrails: new Map(),
-  lastTrailDrop: new Map(),
-  lastPathDrop: new Map()
+  lastTrailDrop: new Map()
 };
 
 function rand(min, max) {
@@ -261,7 +260,6 @@ export function clearBloodTrails(tokenId) {
     RUNTIME.bloodTrails.delete(tokenId);
   }
   RUNTIME.lastTrailDrop.delete(tokenId);
-  RUNTIME.lastPathDrop.delete(tokenId);
 }
 
 function createBloodTrailMark(token, oldX, oldY, colorOverride = null) {
@@ -384,33 +382,41 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
   const layer = canvas.tokens;
   if (!layer) return;
 
-  const halfW = token.w / 2;
-  const halfH = token.h / 2;
+  const halfW  = token.w / 2;
+  const halfH  = token.h / 2;
 
-  // updateToken fires for every incremental position update during a drag,
-  // so prev→new is a tiny step each call. Place one mark at prev with the
-  // travel direction as the smear angle, subject to a spacing check.
-  const fromX = prev.x + halfW;
-  const fromY = prev.y + halfH;
-  const toX   = tokenDoc.x + halfW;
-  const toY   = tokenDoc.y + halfH;
+  // Build full path: start → any ruler waypoints → end
+  const points = [
+    { x: prev.x + halfW, y: prev.y + halfH },
+    ...(Array.isArray(prev.waypoints) ? prev.waypoints.map(wp => ({ x: wp.x, y: wp.y })) : []),
+    { x: tokenDoc.x + halfW, y: tokenDoc.y + halfH }
+  ];
 
-  const dx   = toX - fromX;
-  const dy   = toY - fromY;
-  const dist = Math.hypot(dx, dy);
-  if (dist < 1) return;
-
-  const angle   = Math.atan2(dy, dx);
-  const spacing = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
+  const spacing  = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
   const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
 
-  const last = RUNTIME.lastPathDrop.get(token.id);
-  if (last && Math.hypot(fromX - last.x, fromY - last.y) < spacing) return;
+  // Walk each segment and place marks at spacing intervals along actual path positions
+  for (let seg = 0; seg < points.length - 1; seg++) {
+    const p0 = points[seg];
+    const p1 = points[seg + 1];
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1) continue;
 
-  const mx = fromX + rand(-6, 6);
-  const my = fromY + rand(-6, 6);
-  _placePathMark(layer, mx, my, angle, colorOverride, tokenDoc, lifetime);
-  RUNTIME.lastPathDrop.set(token.id, { x: fromX, y: fromY });
+    const angle  = Math.atan2(dy, dx);
+    const nx     = dx / dist;
+    const ny     = dy / dist;
+
+    // Place a mark at a random offset within each spacing-sized step along the segment
+    let walked = spacing * rand(0.25, 0.75); // random start offset so marks don't cluster at segment starts
+    while (walked < dist) {
+      const px = p0.x + nx * walked + rand(-6, 6);
+      const py = p0.y + ny * walked + rand(-6, 6);
+      _placePathMark(layer, px, py, angle, colorOverride, tokenDoc, lifetime);
+      walked += spacing * rand(0.75, 1.25);
+    }
+  }
 }
 
 function _placePathMark(layer, x, y, angle, colorOverride, tokenDoc, lifetime) {
