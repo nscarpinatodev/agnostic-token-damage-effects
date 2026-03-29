@@ -385,40 +385,30 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
   const halfW  = token.w / 2;
   const halfH  = token.h / 2;
 
-  // Build full path: start → any ruler waypoints → end
-  const points = [
-    { x: prev.x + halfW, y: prev.y + halfH },
-    ...(Array.isArray(prev.waypoints) ? prev.waypoints.map(wp => ({ x: wp.x, y: wp.y })) : []),
-    { x: tokenDoc.x + halfW, y: tokenDoc.y + halfH }
-  ];
-
   const spacing  = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
   const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
 
-  console.log(`ATDE dropPathTrail | points=${JSON.stringify(points)} spacing=${spacing}`);
+  // prev is the segment start (token top-left); convert to center coords
+  const fromX = prev.x + halfW;
+  const fromY = prev.y + halfH;
+  const toX   = tokenDoc.x + halfW;
+  const toY   = tokenDoc.y + halfH;
+  const dx    = toX - fromX;
+  const dy    = toY - fromY;
+  const dist  = Math.hypot(dx, dy);
 
-  // For each segment, place 1 mark at a random position between A and B,
-  // plus 1 more per additional `spacing` of distance.
-  for (let seg = 0; seg < points.length - 1; seg++) {
-    const p0   = points[seg];
-    const p1   = points[seg + 1];
-    const dx   = p1.x - p0.x;
-    const dy   = p1.y - p0.y;
-    const dist = Math.hypot(dx, dy);
+  if (dist < 1) return;
 
-    console.log(`ATDE dropPathTrail | seg ${seg}: dist=${dist.toFixed(1)}`);
-    if (dist < 1) continue;
+  const angle    = Math.atan2(dy, dx);
+  const numMarks = Math.max(1, Math.floor(dist / spacing));
 
-    const angle    = Math.atan2(dy, dx);
-    const numMarks = Math.max(1, Math.floor(dist / spacing));
+  console.log(`ATDE dropPathTrail | from=${fromX.toFixed(0)},${fromY.toFixed(0)} to=${toX.toFixed(0)},${toY.toFixed(0)} dist=${dist.toFixed(1)} marks=${numMarks}`);
 
-    for (let i = 0; i < numMarks; i++) {
-      const t  = Math.random();
-      const px = p0.x + dx * t + rand(-6, 6);
-      const py = p0.y + dy * t + rand(-6, 6);
-      console.log(`ATDE dropPathTrail | seg ${seg} mark ${i} at ${px.toFixed(0)},${py.toFixed(0)} t=${t.toFixed(2)}`);
-      _placePathMark(layer, px, py, angle, colorOverride, tokenDoc, lifetime);
-    }
+  for (let i = 0; i < numMarks; i++) {
+    const t  = Math.random();
+    const px = fromX + dx * t + rand(-6, 6);
+    const py = fromY + dy * t + rand(-6, 6);
+    _placePathMark(layer, px, py, angle, colorOverride, tokenDoc, lifetime);
   }
 }
 

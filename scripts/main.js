@@ -14,6 +14,9 @@ import {
 } from "./effects.js";
 
 const PRE_MOVE = new Map();
+// Tracks the last-processed position for path trails — persists across
+// incremental updateToken calls so we measure full segment distances.
+const PATH_TRAIL_PREV = new Map();
 
 Hooks.once("init", () => {
   console.log("Agnostic Token Damage Effects loading");
@@ -39,6 +42,7 @@ Hooks.on("createToken", tokenDoc => {
 Hooks.on("deleteToken", tokenDoc => {
   clearRuntimeEffects(tokenDoc.id);
   PRE_MOVE.delete(tokenDoc.id);
+  PATH_TRAIL_PREV.delete(tokenDoc.id);
 });
 
 Hooks.on("preUpdateToken", (tokenDoc, change) => {
@@ -48,19 +52,15 @@ Hooks.on("preUpdateToken", (tokenDoc, change) => {
   const token = tokenDoc.object;
   if (!token) return;
 
-  // Capture ruler waypoints for multi-segment path trail support.
-  // These are intermediate stops the user added (e.g. via Spacebar during drag).
-  // Falls back to empty array for simple drags with no waypoints.
-  const ruler     = canvas.controls?.ruler;
-  const waypoints = Array.isArray(ruler?.waypoints)
-    ? ruler.waypoints.map(wp => ({ x: wp.x ?? 0, y: wp.y ?? 0 }))
-    : [];
+  // Always capture current position for sparse trail / blood pool use.
+  PRE_MOVE.set(tokenDoc.id, { x: token.x, y: token.y });
 
-  PRE_MOVE.set(tokenDoc.id, {
-    x: token.x,
-    y: token.y,
-    waypoints
-  });
+  // For path trails: only store on the FIRST update of a movement sequence.
+  // updateToken will advance this forward after each real segment is processed.
+  if (!PATH_TRAIL_PREV.has(tokenDoc.id)) {
+    PATH_TRAIL_PREV.set(tokenDoc.id, { x: token.x, y: token.y });
+    console.log(`ATDE preUpdate | captured path trail start ${token.x.toFixed(0)},${token.y.toFixed(0)}`);
+  }
 });
 
 Hooks.on("updateToken", async (tokenDoc, change) => {
@@ -94,16 +94,30 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
   const prev = PRE_MOVE.get(tokenDoc.id);
   PRE_MOVE.delete(tokenDoc.id);
 
-  console.log(`ATDE | prev=${JSON.stringify(prev)} newPos=${tokenDoc.x},${tokenDoc.y}`);
-
   if (!prev) return;
 
   // Sparse marks at movement origin (existing system)
   maybeDropBloodTrail(tokenDoc, prev.x, prev.y, colorOverride);
 
-  // Smears + drips along full movement path (new system)
+  // Path trails: compare current position to the last-processed segment start.
+  // Only advance PATH_TRAIL_PREV when there is real distance to process.
   if (game.settings.get(MODULE_ID, "enableBloodPathTrails")) {
-    dropPathTrail(tokenDoc, prev, colorOverride);
+    const pathPrev = PATH_TRAIL_PREV.get(tokenDoc.id);
+    if (pathPrev) {
+      const dx   = tokenDoc.x - pathPrev.x;
+      const dy   = tokenDoc.y - pathPrev.y;
+      const dist = Math.hypot(dx, dy);
+      console.log(`ATDE updateToken | pathPrev=${pathPrev.x.toFixed(0)},${pathPrev.y.toFixed(0)} new=${tokenDoc.x.toFixed(0)},${tokenDoc.y.toFixed(0)} dist=${dist.toFixed(1)}`);
+      if (dist < 1) {
+        // Zero-distance phantom update — movement has settled; clear so next
+        // movement captures a fresh start position.
+        PATH_TRAIL_PREV.delete(tokenDoc.id);
+      } else {
+        dropPathTrail(tokenDoc, pathPrev, colorOverride);
+        // Advance segment start to current position for the next segment.
+        PATH_TRAIL_PREV.set(tokenDoc.id, { x: tokenDoc.x, y: tokenDoc.y });
+      }
+    }
   }
 });
 
@@ -155,6 +169,7 @@ async function applyStateToToken(tokenDoc) {
     await clearVisualFilter(token);
     clearRuntimeEffects(tokenDoc.id);
     PRE_MOVE.delete(tokenDoc.id);
+    PATH_TRAIL_PREV.delete(tokenDoc.id);
     if ((tokenDoc.alpha ?? 1) !== 1) {
       await tokenDoc.update({ alpha: 1 }, { animate: false });
     }
