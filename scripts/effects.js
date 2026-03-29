@@ -395,6 +395,9 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
   const spacing  = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
   const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
 
+  console.log(`ATDE dropPathTrail | points=${JSON.stringify(points)} spacing=${spacing}`);
+  let totalMarks = 0;
+
   // Walk each segment and place marks at spacing intervals along actual path positions
   for (let seg = 0; seg < points.length - 1; seg++) {
     const p0 = points[seg];
@@ -402,6 +405,7 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
     const dx = p1.x - p0.x;
     const dy = p1.y - p0.y;
     const dist = Math.hypot(dx, dy);
+    console.log(`ATDE dropPathTrail | seg ${seg}: dist=${dist.toFixed(1)}`);
     if (dist < 1) continue;
 
     const angle  = Math.atan2(dy, dx);
@@ -415,8 +419,10 @@ export function dropPathTrail(tokenDoc, prev, colorOverride) {
       const py = p0.y + ny * walked + rand(-6, 6);
       _placePathMark(layer, px, py, angle, colorOverride, tokenDoc, lifetime);
       walked += spacing * rand(0.75, 1.25);
+      totalMarks++;
     }
   }
+  console.log(`ATDE dropPathTrail | placed ${totalMarks} marks`);
 }
 
 function _placePathMark(layer, x, y, angle, colorOverride, tokenDoc, lifetime) {

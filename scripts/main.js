@@ -94,6 +94,8 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
   const prev = PRE_MOVE.get(tokenDoc.id);
   PRE_MOVE.delete(tokenDoc.id);
 
+  console.log(`ATDE | prev=${JSON.stringify(prev)} newPos=${tokenDoc.x},${tokenDoc.y}`);
+
   if (!prev) return;
 
   // Sparse marks at movement origin (existing system)
