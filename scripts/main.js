@@ -56,28 +56,16 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
   if (!moved) return;
 
   const actor = tokenDoc.actor;
-  if (!actor) {
-    PRE_MOVE.delete(tokenDoc.id);
-    return;
-  }
+  if (!actor) { PRE_MOVE.delete(tokenDoc.id); return; }
 
   const hp = getActorHp(actor);
-  if (!hp) {
-    PRE_MOVE.delete(tokenDoc.id);
-    return;
-  }
+  if (!hp) { PRE_MOVE.delete(tokenDoc.id); return; }
 
   const state = computeState(hp.value, hp.max);
-  if (!state.isBleeding || state.isDead) {
-    PRE_MOVE.delete(tokenDoc.id);
-    return;
-  }
+  if (!state.isBleeding || state.isDead) { PRE_MOVE.delete(tokenDoc.id); return; }
 
   const { color: colorOverride, suppressBlood } = getBloodColorForActor(actor, getSelectedPreset());
-  if (suppressBlood) {
-    PRE_MOVE.delete(tokenDoc.id);
-    return;
-  }
+  if (suppressBlood) { PRE_MOVE.delete(tokenDoc.id); return; }
 
   const prev = PRE_MOVE.get(tokenDoc.id);
   PRE_MOVE.delete(tokenDoc.id);
@@ -86,16 +74,45 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
 
   // Sparse marks at movement origin (existing system)
   maybeDropBloodTrail(tokenDoc, prev.x, prev.y, colorOverride);
+});
 
-  // Path trails: use movementHistory which contains the full authoritative
-  // waypoint path Foundry recorded for this move.
-  if (game.settings.get(MODULE_ID, "enableBloodPathTrails")) {
-    const history = tokenDoc.movementHistory;
-    console.log(`ATDE updateToken | movementHistory=${JSON.stringify(history?.map(w => ({ x: w.x, y: w.y })))}`);
-    if (Array.isArray(history) && history.length > 0) {
-      dropPathTrail(tokenDoc, history, colorOverride);
-    }
-  }
+// moveToken fires once per move after the update completes, with the full
+// movement operation including origin, destination, and waypoint history.
+Hooks.on("moveToken", (tokenDoc, movement) => {
+  if (!game.settings.get(MODULE_ID, "enableBloodPathTrails")) return;
+  if (!canvas?.ready) return;
+
+  const actor = tokenDoc.actor;
+  if (!actor) return;
+
+  const hp = getActorHp(actor);
+  if (!hp) return;
+
+  const state = computeState(hp.value, hp.max);
+  if (!state.isBleeding || state.isDead) return;
+
+  const { color: colorOverride, suppressBlood } = getBloodColorForActor(actor, getSelectedPreset());
+  if (suppressBlood) return;
+
+  console.log(`ATDE moveToken | movement=${JSON.stringify({ origin: movement?.origin, destination: movement?.destination, history: movement?.history })}`);
+
+  // Build waypoint list from origin + history waypoints + destination
+  const origin      = movement?.origin;
+  const destination = movement?.destination;
+  if (!origin || !destination) return;
+
+  const historyWaypoints = movement?.history?.recorded?.waypoints
+    ?? movement?.history?.unrecorded?.waypoints
+    ?? [];
+
+  const waypoints = [
+    { x: origin.x, y: origin.y },
+    ...historyWaypoints.map(w => ({ x: w.x, y: w.y })),
+    { x: destination.x, y: destination.y }
+  ];
+
+  console.log(`ATDE moveToken | waypoints=${JSON.stringify(waypoints)}`);
+  dropPathTrail(tokenDoc, waypoints, colorOverride);
 });
 
 Hooks.on("updateActor", async (actor, change) => {
