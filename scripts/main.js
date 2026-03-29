@@ -9,7 +9,8 @@ import {
   ensureBloodPool,
   removeBloodPool,
   clearRuntimeEffects,
-  maybeDropBloodTrail
+  maybeDropBloodTrail,
+  dropPathTrail
 } from "./effects.js";
 
 const PRE_MOVE = new Map();
@@ -47,9 +48,18 @@ Hooks.on("preUpdateToken", (tokenDoc, change) => {
   const token = tokenDoc.object;
   if (!token) return;
 
+  // Capture ruler waypoints for multi-segment path trail support.
+  // These are intermediate stops the user added (e.g. via Spacebar during drag).
+  // Falls back to empty array for simple drags with no waypoints.
+  const ruler     = canvas.controls?.ruler;
+  const waypoints = Array.isArray(ruler?.waypoints)
+    ? ruler.waypoints.map(wp => ({ x: wp.x ?? 0, y: wp.y ?? 0 }))
+    : [];
+
   PRE_MOVE.set(tokenDoc.id, {
     x: token.x,
-    y: token.y
+    y: token.y,
+    waypoints
   });
 });
 
@@ -85,7 +95,14 @@ Hooks.on("updateToken", async (tokenDoc, change) => {
   PRE_MOVE.delete(tokenDoc.id);
 
   if (!prev) return;
+
+  // Sparse marks at movement origin (existing system)
   maybeDropBloodTrail(tokenDoc, prev.x, prev.y, colorOverride);
+
+  // Smears + drips along full movement path (new system)
+  if (game.settings.get(MODULE_ID, "enableBloodPathTrails")) {
+    dropPathTrail(tokenDoc, prev, colorOverride);
+  }
 });
 
 Hooks.on("updateActor", async (actor, change) => {

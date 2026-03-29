@@ -221,7 +221,7 @@ export function clearRuntimeEffects(tokenId) {
 }
 
 // ---------------------------------------------------------------------------
-// Blood trails
+// Blood trails — sparse marks (existing system)
 // ---------------------------------------------------------------------------
 
 export function maybeDropBloodTrail(tokenDoc, oldX, oldY, colorOverride = null) {
@@ -367,6 +367,133 @@ function destroyBloodTrailGraphic(tokenId, graphic) {
     }
   }
   if (set.size === 0) RUNTIME.bloodTrails.delete(tokenId);
+}
+
+// ---------------------------------------------------------------------------
+// Blood path trails — smears + drips along full movement path
+// ---------------------------------------------------------------------------
+
+export function dropPathTrail(tokenDoc, prev, colorOverride) {
+  if (!canvas?.ready) return;
+
+  const token = tokenDoc?.object;
+  if (!token || token.destroyed) return;
+
+  const layer = canvas.tokens;
+  if (!layer) return;
+
+  const halfW = token.w / 2;
+  const halfH = token.h / 2;
+
+  // Build path as token centers: start → captured waypoints → end
+  const points = [
+    { x: prev.x + halfW, y: prev.y + halfH },
+    ...(Array.isArray(prev.waypoints) ? prev.waypoints.map(wp => ({ x: wp.x, y: wp.y })) : []),
+    { x: token.x + halfW, y: token.y + halfH }
+  ];
+
+  const gridSize = canvas.grid?.size ?? 100;
+  const spacing  = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
+  const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
+
+  const visitedKeys  = new Set(); // deduplicate grid squares across all segments
+  let   lastMarkPos  = null;      // for spacing check between consecutive marks
+
+  for (let seg = 0; seg < points.length - 1; seg++) {
+    const p0    = points[seg];
+    const p1    = points[seg + 1];
+    const dx    = p1.x - p0.x;
+    const dy    = p1.y - p0.y;
+    const dist  = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx);
+
+    if (dist < 1) continue;
+
+    // Walk at half-grid steps to collect every grid square this segment crosses
+    const steps      = Math.max(1, Math.ceil(dist / (gridSize * 0.5)));
+    const segSquares = [];
+
+    for (let i = 0; i <= steps; i++) {
+      const t   = i / steps;
+      const px  = p0.x + dx * t;
+      const py  = p0.y + dy * t;
+      const gx  = Math.floor(px / gridSize) * gridSize;
+      const gy  = Math.floor(py / gridSize) * gridSize;
+      const key = `${gx},${gy}`;
+      if (!visitedKeys.has(key)) {
+        visitedKeys.add(key);
+        segSquares.push({ gx, gy });
+      }
+    }
+
+    // Place a mark in each newly-visited square, subject to spacing ±25%
+    for (const { gx, gy } of segSquares) {
+      const cx = gx + gridSize / 2;
+      const cy = gy + gridSize / 2;
+
+      const threshold = spacing * (0.75 + Math.random() * 0.5);
+      if (lastMarkPos && Math.hypot(cx - lastMarkPos.x, cy - lastMarkPos.y) < threshold) continue;
+
+      // Position within square: center ± 18% jitter
+      const mx = cx + rand(-gridSize * 0.18, gridSize * 0.18);
+      const my = cy + rand(-gridSize * 0.18, gridSize * 0.18);
+
+      _placePathMark(layer, mx, my, angle, colorOverride, tokenDoc, lifetime);
+      lastMarkPos = { x: cx, y: cy };
+    }
+  }
+}
+
+function _placePathMark(layer, x, y, angle, colorOverride, tokenDoc, lifetime) {
+  const g = new PIXI.Graphics();
+  g._hvBloodTrail    = true;
+  g._hvColorOverride = colorOverride;
+  g.x = x;
+  g.y = y;
+
+  if (Math.random() < 0.5) {
+    g.alpha = 0.58;
+    _drawBloodSmear(g, angle);
+  } else {
+    g.alpha = 0.62;
+    drawBloodTrailMark(g);
+  }
+
+  layer.addChildAt(g, 0);
+
+  const fadeTimeout = setTimeout(() => fadeOutBloodTrailMark(tokenDoc.id, g, 1200), lifetime);
+
+  let set = RUNTIME.bloodTrails.get(tokenDoc.id);
+  if (!set) { set = new Set(); RUNTIME.bloodTrails.set(tokenDoc.id, set); }
+  set.add({ graphic: g, timeout: fadeTimeout, fadeTicker: null });
+}
+
+function _drawBloodSmear(g, angle) {
+  const bloodColor = g._hvColorOverride ?? getBloodColor();
+  const darkBlood  = tint(bloodColor, 0.65);
+
+  // Asymmetric teardrop: wide at trailing end (-halfLen), tapers to leading end (+halfLen)
+  const halfLen = rand(10, 17);
+  const wTrail  = rand(3, 6);          // half-width at trailing (back) end
+  const wLead   = rand(0.5, 1.8);      // half-width at leading (front) end
+  const midX    = halfLen * rand(0.1, 0.35); // control point offset from leading end
+
+  // Dark shadow
+  g.beginFill(darkBlood, 0.45);
+  g.moveTo(-halfLen - 1, 0);
+  g.bezierCurveTo(-halfLen, wTrail + 1,  midX, wLead + 1,  halfLen + 1, 0);
+  g.bezierCurveTo(           midX, -wLead - 1, -halfLen, -wTrail - 1, -halfLen - 1, 0);
+  g.endFill();
+
+  // Main smear
+  g.beginFill(bloodColor, 0.82);
+  g.moveTo(-halfLen, 0);
+  g.bezierCurveTo(-halfLen, wTrail,  midX, wLead,  halfLen, 0);
+  g.bezierCurveTo(           midX, -wLead, -halfLen, -wTrail, -halfLen, 0);
+  g.endFill();
+
+  // Rotate the graphic to align with travel direction
+  g.rotation = angle;
 }
 
 // ---------------------------------------------------------------------------

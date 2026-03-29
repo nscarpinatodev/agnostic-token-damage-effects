@@ -6,7 +6,7 @@ import { MODULE_ID } from "./presets.js";
 
 export const CREATURE_TYPES = {
   humanoid:   { label: "Humanoid",       defaultColor: null,      suppress: false },
-  undead:     { label: "Undead",          defaultColor: "#2a0505", suppress: false },
+  undead:     { label: "Undead",          defaultColor: "#808080", suppress: false },
   beast:      { label: "Beast / Animal",  defaultColor: null,      suppress: false },
   construct:  { label: "Construct",       defaultColor: "#5a3010", suppress: false },
   aberration: { label: "Aberration",      defaultColor: "#4b0082", suppress: false },

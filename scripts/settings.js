@@ -163,11 +163,20 @@ export function registerSettings(refreshAllVisibleTokens) {
 
   game.settings.register(MODULE_ID, "enableBloodTrails", {
     name: "Enable Blood Trails",
-    hint: "Leave top-down blood drops near the center of the token as it moves while bloodied.",
+    hint: "Leave a sparse blood mark near the token's origin each time it moves while bloodied.",
     scope: "world",
     config: true,
     type: Boolean,
     default: true
+  });
+
+  game.settings.register(MODULE_ID, "enableBloodPathTrails", {
+    name: "Enable Blood Path Trails",
+    hint: "Leave drips and smears along the token's full movement path through each grid square it crosses.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
   });
 
   game.settings.register(MODULE_ID, "bloodTrailLifetime", {
