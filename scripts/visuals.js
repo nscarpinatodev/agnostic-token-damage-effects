@@ -30,9 +30,15 @@ export async function applyAlpha(tokenDoc, alpha) {
   await tokenDoc.update({ alpha }, { animate: false });
 }
 
-async function tryApply(target, params) {
+// canUpdate: true  → persist filter to document flags (GM / token owner)
+// canUpdate: false → apply locally only, no document write (other players)
+async function tryApply(target, params, canUpdate) {
   try {
-    await globalThis.TokenMagic.addUpdateFilters(target, params);
+    if (canUpdate) {
+      await globalThis.TokenMagic.addUpdateFilters(target, params);
+    } else {
+      await globalThis.TokenMagic.addFilters(target, params);
+    }
     return true;
   } catch (_err) {
     return false;
@@ -58,29 +64,27 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   }
   if (!tokenMagicAvailable() || !token) return;
 
+  // Only persist filter to document flags if the current user can modify the token.
+  // Other players apply a local-only filter (no document write) which is
+  // re-applied on canvasReady, so they still see the visual effect correctly.
+  const canUpdate = token.document?.canUserModify(game.user, "update") ?? false;
+
   let red = 1, green = 1, blue = 1;
 
   if (applyTint && tintEnabled) {
-    // damage = 0 at full HP, 1 at 0 HP
     const damage = 1 - state.ratioRaw;
+    const color  = tintColor ?? hexToNumber(game.settings.get(MODULE_ID, "bloodColor"));
 
-    // Resolve the tint color — creature-type color, or fall back to global blood color
-    const color = tintColor ?? hexToNumber(game.settings.get(MODULE_ID, "bloodColor"));
-
-    // Extract normalised RGB channels (0–1) and find the dominant channel
     const rRaw = ((color >> 16) & 0xff) / 255;
     const gRaw = ((color >> 8)  & 0xff) / 255;
     const bRaw = ( color        & 0xff) / 255;
     const maxC = Math.max(rRaw, gRaw, bRaw);
 
     if (maxC > 0) {
-      // Normalise so the dominant channel = 1; others scale proportionally
       const rN = rRaw / maxC;
       const gN = gRaw / maxC;
       const bN = bRaw / maxC;
 
-      // Dominant channels are boosted toward 1.8; absent channels are pulled toward 0.3
-      // Formula: 1 + (norm * 0.8 - (1 - norm) * 0.7) * damage
       red   = 1 + (rN * 0.8 - (1 - rN) * 0.7) * damage;
       green = 1 + (gN * 0.8 - (1 - gN) * 0.7) * damage;
       blue  = 1 + (bN * 0.8 - (1 - bN) * 0.7) * damage;
@@ -97,7 +101,7 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   const targets = [token, token.document, [token], [token.document]].filter(Boolean);
   let success = false;
   for (const target of targets) {
-    success = (await tryApply(target, params)) || success;
+    success = (await tryApply(target, params, canUpdate)) || success;
     if (success) break;
   }
 
