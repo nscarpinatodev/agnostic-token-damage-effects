@@ -1,5 +1,7 @@
 import { MODULE_ID, TMFX_FILTER_ID, tokenMagicAvailable } from "./presets.js";
 
+const DBG = "ATDE |";
+
 function hexToNumber(value) {
   if (typeof value !== "string") return 0x8b0000;
   return Number.parseInt(value.replace("#", ""), 16) || 0x8b0000;
@@ -26,15 +28,44 @@ export function computeState(hpValue, hpMax) {
 export async function applyAlpha(tokenDoc, alpha) {
   const current = Number(tokenDoc.alpha ?? 1);
   if (Math.abs(current - alpha) < 0.001) return;
-  if (!tokenDoc.canUserModify(game.user, "update")) return;
+  const canMod = tokenDoc.canUserModify(game.user, "update");
+  console.log(`${DBG} applyAlpha | token="${tokenDoc.name}" user="${game.user.name}" canModify=${canMod} currentAlpha=${current} targetAlpha=${alpha}`);
+  if (!canMod) return;
   await tokenDoc.update({ alpha }, { animate: false });
+}
+
+// Intercept all TMFX entry points once and log + stack-trace every call.
+// This runs once when the module loads so we catch calls from ANY source,
+// not just our own code.
+let _tmfxPatched = false;
+export function patchTmfxLogging() {
+  if (_tmfxPatched || !globalThis.TokenMagic) return;
+  _tmfxPatched = true;
+  const TM = globalThis.TokenMagic;
+  for (const method of ["addUpdateFilters", "addFilters", "deleteFilters", "updateFilters", "removeFilters"]) {
+    const orig = TM[method];
+    if (typeof orig !== "function") continue;
+    TM[method] = async function(...args) {
+      const target = args[0];
+      const targetName = Array.isArray(target)
+        ? target.map(t => t?.name ?? t?.document?.name ?? "(unknown)").join(", ")
+        : (target?.name ?? target?.document?.name ?? "(unknown)");
+      const user = game?.user?.name ?? "?";
+      console.groupCollapsed(`${DBG} TMFX.${method}() | user="${user}" target="${targetName}"`);
+      console.trace("call stack");
+      console.groupEnd();
+      return orig.apply(this, args);
+    };
+  }
+  console.log(`${DBG} TMFX methods patched for debug logging`);
 }
 
 async function tryApply(target, params) {
   try {
     await globalThis.TokenMagic.addUpdateFilters(target, params);
     return true;
-  } catch (_err) {
+  } catch (err) {
+    console.warn(`${DBG} tryApply caught error:`, err);
     return false;
   }
 }
@@ -43,7 +74,8 @@ async function tryDelete(target, filterId) {
   try {
     await globalThis.TokenMagic.deleteFilters(target, filterId);
     return true;
-  } catch (_err) {
+  } catch (err) {
+    console.warn(`${DBG} tryDelete caught error:`, err);
     return false;
   }
 }
@@ -52,19 +84,19 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   const satEnabled  = game.settings.get(MODULE_ID, "enableSaturation");
   const tintEnabled = game.settings.get(MODULE_ID, "enableDamageTint");
 
+  const canUpdate = token?.document?.canUserModify(game.user, "update") ?? false;
+  console.log(`${DBG} applySaturation | token="${token?.document?.name}" user="${game.user.name}" canUpdate=${canUpdate} satEnabled=${satEnabled} tintEnabled=${tintEnabled}`);
+
   if (!satEnabled && !tintEnabled) {
     await clearVisualFilter(token);
     return;
   }
   if (!tokenMagicAvailable() || !token) return;
 
-  // Skip all TMFX calls for non-owners. When the GM/owner calls addUpdateFilters,
-  // TMFX persists the filter to document flags and Foundry syncs them to all clients
-  // automatically — non-owners will see the correct visual without needing to call
-  // TMFX themselves, and calling any TMFX method (even addFilters) causes server-side
-  // permission errors for document writes we're not allowed to make.
-  const canUpdate = token.document?.canUserModify(game.user, "update") ?? false;
-  if (!canUpdate) return;
+  if (!canUpdate) {
+    console.log(`${DBG} applySaturation | SKIPPING (non-owner) for token="${token?.document?.name}"`);
+    return;
+  }
 
   let red = 1, green = 1, blue = 1;
 
@@ -95,6 +127,7 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
     red, green, blue
   }];
 
+  console.log(`${DBG} applySaturation | calling addUpdateFilters for token="${token?.document?.name}"`);
   const targets = [token, token.document, [token], [token.document]].filter(Boolean);
   let success = false;
   for (const target of targets) {
@@ -103,14 +136,18 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   }
 
   if (!success) {
-    console.warn("Agnostic Token Damage Effects | Could not apply Token Magic desaturation filter", token);
+    console.warn(`${DBG} Could not apply Token Magic desaturation filter`, token);
   }
 }
 
 export async function clearVisualFilter(token) {
+  const canUpdate = token?.document?.canUserModify(game.user, "update") ?? false;
+  console.log(`${DBG} clearVisualFilter | token="${token?.document?.name}" user="${game.user.name}" canUpdate=${canUpdate}`);
   if (!tokenMagicAvailable() || !token) return;
-  const canUpdate = token.document?.canUserModify(game.user, "update") ?? false;
-  if (!canUpdate) return;
+  if (!canUpdate) {
+    console.log(`${DBG} clearVisualFilter | SKIPPING (non-owner) for token="${token?.document?.name}"`);
+    return;
+  }
   const targets = [token, token.document, [token], [token.document]].filter(Boolean);
   for (const target of targets) {
     const ok = await tryDelete(target, TMFX_FILTER_ID);

@@ -1,7 +1,7 @@
 import { MODULE_ID, tokenMagicAvailable, getSelectedPreset } from "./presets.js";
 import { registerSettings } from "./settings.js";
 import { hpRelevantChange, getActorHp } from "./hp-resolver.js";
-import { computeState, applyAlpha, applySaturation, clearVisualFilter } from "./visuals.js";
+import { computeState, applyAlpha, applySaturation, clearVisualFilter, patchTmfxLogging } from "./visuals.js";
 import { getBloodColorForActor } from "./creature-types.js";
 import {
   ensureBleedingOverlay,
@@ -25,6 +25,8 @@ Hooks.once("ready", () => {
     ui.notifications?.error("Agnostic Token Damage Effects requires Token Magic FX for desaturation. Enable Token Magic FX and reload.");
     console.error("Agnostic Token Damage Effects | Token Magic FX is not active.");
   }
+  // Patch TMFX to log all calls with stack traces so we can diagnose permission errors.
+  patchTmfxLogging();
 });
 
 Hooks.on("canvasReady", () => {
