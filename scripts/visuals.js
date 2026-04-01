@@ -28,9 +28,8 @@ export function computeState(hpValue, hpMax) {
 export async function applyAlpha(tokenDoc, alpha) {
   const current = Number(tokenDoc.alpha ?? 1);
   if (Math.abs(current - alpha) < 0.001) return;
-  const canMod = tokenDoc.canUserModify(game.user, "update");
-  console.log(`${DBG} applyAlpha | token="${tokenDoc.name}" user="${game.user.name}" canModify=${canMod} currentAlpha=${current} targetAlpha=${alpha}`);
-  if (!canMod) return;
+  console.log(`${DBG} applyAlpha | token="${tokenDoc.name}" user="${game.user.name}" isGM=${game.user.isGM} currentAlpha=${current} targetAlpha=${alpha}`);
+  if (!game.user.isGM) return;
   await tokenDoc.update({ alpha }, { animate: false });
 }
 
@@ -84,8 +83,7 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   const satEnabled  = game.settings.get(MODULE_ID, "enableSaturation");
   const tintEnabled = game.settings.get(MODULE_ID, "enableDamageTint");
 
-  const canUpdate = token?.document?.canUserModify(game.user, "update") ?? false;
-  console.log(`${DBG} applySaturation | token="${token?.document?.name}" user="${game.user.name}" canUpdate=${canUpdate} satEnabled=${satEnabled} tintEnabled=${tintEnabled}`);
+  console.log(`${DBG} applySaturation | token="${token?.document?.name}" user="${game.user.name}" isGM=${game.user.isGM} satEnabled=${satEnabled} tintEnabled=${tintEnabled}`);
 
   if (!satEnabled && !tintEnabled) {
     await clearVisualFilter(token);
@@ -93,8 +91,12 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   }
   if (!tokenMagicAvailable() || !token) return;
 
-  if (!canUpdate) {
-    console.log(`${DBG} applySaturation | SKIPPING (non-owner) for token="${token?.document?.name}"`);
+  // Only the GM calls TMFX. addUpdateFilters writes to document flags which
+  // Foundry syncs to all clients; TMFX on each client reads those flags and
+  // applies the filter locally. Non-GM players calling any TMFX write method
+  // causes server-side permission errors even for tokens they own.
+  if (!game.user.isGM) {
+    console.log(`${DBG} applySaturation | SKIPPING TMFX (non-GM) for token="${token?.document?.name}"`);
     return;
   }
 
@@ -141,11 +143,10 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
 }
 
 export async function clearVisualFilter(token) {
-  const canUpdate = token?.document?.canUserModify(game.user, "update") ?? false;
-  console.log(`${DBG} clearVisualFilter | token="${token?.document?.name}" user="${game.user.name}" canUpdate=${canUpdate}`);
+  console.log(`${DBG} clearVisualFilter | token="${token?.document?.name}" user="${game.user.name}" isGM=${game.user.isGM}`);
   if (!tokenMagicAvailable() || !token) return;
-  if (!canUpdate) {
-    console.log(`${DBG} clearVisualFilter | SKIPPING (non-owner) for token="${token?.document?.name}"`);
+  if (!game.user.isGM) {
+    console.log(`${DBG} clearVisualFilter | SKIPPING TMFX (non-GM) for token="${token?.document?.name}"`);
     return;
   }
   const targets = [token, token.document, [token], [token.document]].filter(Boolean);
