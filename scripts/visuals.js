@@ -30,15 +30,9 @@ export async function applyAlpha(tokenDoc, alpha) {
   await tokenDoc.update({ alpha }, { animate: false });
 }
 
-// canUpdate: true  → persist filter to document flags (GM / token owner)
-// canUpdate: false → apply locally only, no document write (other players)
-async function tryApply(target, params, canUpdate) {
+async function tryApply(target, params) {
   try {
-    if (canUpdate) {
-      await globalThis.TokenMagic.addUpdateFilters(target, params);
-    } else {
-      await globalThis.TokenMagic.addFilters(target, params);
-    }
+    await globalThis.TokenMagic.addUpdateFilters(target, params);
     return true;
   } catch (_err) {
     return false;
@@ -64,10 +58,13 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   }
   if (!tokenMagicAvailable() || !token) return;
 
-  // Only persist filter to document flags if the current user can modify the token.
-  // Other players apply a local-only filter (no document write) which is
-  // re-applied on canvasReady, so they still see the visual effect correctly.
+  // Skip all TMFX calls for non-owners. When the GM/owner calls addUpdateFilters,
+  // TMFX persists the filter to document flags and Foundry syncs them to all clients
+  // automatically — non-owners will see the correct visual without needing to call
+  // TMFX themselves, and calling any TMFX method (even addFilters) causes server-side
+  // permission errors for document writes we're not allowed to make.
   const canUpdate = token.document?.canUserModify(game.user, "update") ?? false;
+  if (!canUpdate) return;
 
   let red = 1, green = 1, blue = 1;
 
@@ -101,7 +98,7 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   const targets = [token, token.document, [token], [token.document]].filter(Boolean);
   let success = false;
   for (const target of targets) {
-    success = (await tryApply(target, params, canUpdate)) || success;
+    success = (await tryApply(target, params)) || success;
     if (success) break;
   }
 
@@ -112,6 +109,8 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
 
 export async function clearVisualFilter(token) {
   if (!tokenMagicAvailable() || !token) return;
+  const canUpdate = token.document?.canUserModify(game.user, "update") ?? false;
+  if (!canUpdate) return;
   const targets = [token, token.document, [token], [token.document]].filter(Boolean);
   for (const target of targets) {
     const ok = await tryDelete(target, TMFX_FILTER_ID);
