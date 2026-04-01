@@ -28,8 +28,9 @@ export function computeState(hpValue, hpMax) {
 export async function applyAlpha(tokenDoc, alpha) {
   const current = Number(tokenDoc.alpha ?? 1);
   if (Math.abs(current - alpha) < 0.001) return;
-  console.log(`${DBG} applyAlpha | token="${tokenDoc.name}" user="${game.user.name}" isGM=${game.user.isGM} currentAlpha=${current} targetAlpha=${alpha}`);
-  if (!game.user.isGM) return;
+  const canMod = tokenDoc.canUserModify(game.user, "update");
+  console.log(`${DBG} applyAlpha | token="${tokenDoc.name}" user="${game.user.name}" isGM=${game.user.isGM} canModify=${canMod} currentAlpha=${current} targetAlpha=${alpha}`);
+  if (!canMod) return;
   await tokenDoc.update({ alpha }, { animate: false });
 }
 
@@ -83,7 +84,12 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   const satEnabled  = game.settings.get(MODULE_ID, "enableSaturation");
   const tintEnabled = game.settings.get(MODULE_ID, "enableDamageTint");
 
-  console.log(`${DBG} applySaturation | token="${token?.document?.name}" user="${game.user.name}" isGM=${game.user.isGM} satEnabled=${satEnabled} tintEnabled=${tintEnabled}`);
+  // fxPlayerPermission ON  → TMFX broadcasts non-GM calls to the GM via socket (safe)
+  // fxPlayerPermission OFF → TMFX calls setFlag directly → server rejects for non-GM
+  const fxPlayerPerm = game.settings.get('tokenmagic', 'fxPlayerPermission') ?? false;
+  const canCallTMFX  = game.user.isGM || fxPlayerPerm;
+
+  console.log(`${DBG} applySaturation | token="${token?.document?.name}" user="${game.user.name}" isGM=${game.user.isGM} fxPlayerPerm=${fxPlayerPerm} canCallTMFX=${canCallTMFX} satEnabled=${satEnabled} tintEnabled=${tintEnabled}`);
 
   if (!satEnabled && !tintEnabled) {
     await clearVisualFilter(token);
@@ -91,12 +97,8 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
   }
   if (!tokenMagicAvailable() || !token) return;
 
-  // Only the GM calls TMFX. addUpdateFilters writes to document flags which
-  // Foundry syncs to all clients; TMFX on each client reads those flags and
-  // applies the filter locally. Non-GM players calling any TMFX write method
-  // causes server-side permission errors even for tokens they own.
-  if (!game.user.isGM) {
-    console.log(`${DBG} applySaturation | SKIPPING TMFX (non-GM) for token="${token?.document?.name}"`);
+  if (!canCallTMFX) {
+    console.log(`${DBG} applySaturation | SKIPPING TMFX — not GM and fxPlayerPermission is disabled in TMFX settings`);
     return;
   }
 
@@ -143,10 +145,12 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
 }
 
 export async function clearVisualFilter(token) {
-  console.log(`${DBG} clearVisualFilter | token="${token?.document?.name}" user="${game.user.name}" isGM=${game.user.isGM}`);
+  const fxPlayerPerm = game.settings.get('tokenmagic', 'fxPlayerPermission') ?? false;
+  const canCallTMFX  = game.user.isGM || fxPlayerPerm;
+  console.log(`${DBG} clearVisualFilter | token="${token?.document?.name}" user="${game.user.name}" isGM=${game.user.isGM} fxPlayerPerm=${fxPlayerPerm} canCallTMFX=${canCallTMFX}`);
   if (!tokenMagicAvailable() || !token) return;
-  if (!game.user.isGM) {
-    console.log(`${DBG} clearVisualFilter | SKIPPING TMFX (non-GM) for token="${token?.document?.name}"`);
+  if (!canCallTMFX) {
+    console.log(`${DBG} clearVisualFilter | SKIPPING TMFX — not GM and fxPlayerPermission is disabled`);
     return;
   }
   const targets = [token, token.document, [token], [token.document]].filter(Boolean);
