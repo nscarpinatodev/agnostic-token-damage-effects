@@ -167,7 +167,7 @@ async function applyStateToToken(tokenDoc) {
     await clearVisualFilter(token);
     clearRuntimeEffects(tokenDoc.id);
     PRE_MOVE.delete(tokenDoc.id);
-    if ((tokenDoc.alpha ?? 1) !== 1) {
+    if ((tokenDoc.alpha ?? 1) !== 1 && tokenDoc.canUserModify(game.user, "update")) {
       await tokenDoc.update({ alpha: 1 }, { animate: false });
     }
     return;

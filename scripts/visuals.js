@@ -26,6 +26,7 @@ export function computeState(hpValue, hpMax) {
 export async function applyAlpha(tokenDoc, alpha) {
   const current = Number(tokenDoc.alpha ?? 1);
   if (Math.abs(current - alpha) < 0.001) return;
+  if (!tokenDoc.canUserModify(game.user, "update")) return;
   await tokenDoc.update({ alpha }, { animate: false });
 }
 
