@@ -1,0 +1,67 @@
+#atde-type-colors .window-content {
+  padding: 8px 12px;
+}
+
+#atde-type-colors .form-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin: 0;
+}
+
+#atde-type-colors .form-group label {
+  flex: 1;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+}
+
+#atde-type-colors .form-fields {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+#atde-type-colors .form-fields input[type="color"] {
+  width: 56px;
+  height: 26px;
+  padding: 1px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+#atde-type-colors .form-fields button {
+  padding: 2px 7px;
+  height: 26px;
+  line-height: 1;
+}
+
+#atde-type-colors .form-fields .hint {
+  font-style: italic;
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+#atde-type-colors .notes {
+  margin: 0 0 8px;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+#atde-type-colors .sheet-footer {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#atde-type-colors .sheet-footer button {
+  flex: 1;
+}
