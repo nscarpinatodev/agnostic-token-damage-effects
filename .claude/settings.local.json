@@ -57,7 +57,13 @@
       "Bash(powershell -Command \"Compress-Archive -Force -Path ''module.json'',''scripts'' -DestinationPath ''agnostic-token-damage-effects-v1.34.zip''\")",
       "Bash(curl -s \"https://raw.githubusercontent.com/Feu-Secret/Tokenmagic/master/tokenmagic/module/tokenmagic.js\")",
       "Bash(curl -s \"https://raw.githubusercontent.com/Feu-Secret/Tokenmagic/master/tokenmagic/module/proto/PlaceableObjectProto.js\")",
-      "Bash(curl -s \"https://raw.githubusercontent.com/Feu-Secret/Tokenmagic/master/tokenmagic/module/proto/CanvasDocumentProto.js\")"
+      "Bash(curl -s \"https://raw.githubusercontent.com/Feu-Secret/Tokenmagic/master/tokenmagic/module/proto/CanvasDocumentProto.js\")",
+      "Bash(powershell -Command 'Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead\\('\\\\''agnostic-token-damage-effects-v1.39.zip'\\\\''\\); $zip.Entries | Select-Object FullName; $zip.Dispose\\(\\)')",
+      "Bash(\"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" release view v1.39)",
+      "Bash(\"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" release list --repo nscarpinatodev/agnostic-token-damage-effects --limit 5)",
+      "Bash(powershell -Command 'Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead\\('\\\\''agnostic-token-damage-effects-v1.37.zip'\\\\''\\); $zip.Entries | Select-Object FullName; $zip.Dispose\\(\\)')",
+      "Bash(powershell -Command ':*)",
+      "Bash(powershell -Command \"\\(Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/nscarpinatodev/agnostic-token-damage-effects/main/module.json' -UseBasicParsing\\).Content\")"
     ]
   }
 }
