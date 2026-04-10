@@ -63,7 +63,8 @@
       "Bash(\"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" release list --repo nscarpinatodev/agnostic-token-damage-effects --limit 5)",
       "Bash(powershell -Command 'Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead\\('\\\\''agnostic-token-damage-effects-v1.37.zip'\\\\''\\); $zip.Entries | Select-Object FullName; $zip.Dispose\\(\\)')",
       "Bash(powershell -Command ':*)",
-      "Bash(powershell -Command \"\\(Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/nscarpinatodev/agnostic-token-damage-effects/main/module.json' -UseBasicParsing\\).Content\")"
+      "Bash(powershell -Command \"\\(Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/nscarpinatodev/agnostic-token-damage-effects/main/module.json' -UseBasicParsing\\).Content\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/Muttley/foundryvtt-fallout/develop/system/src/documents/FalloutActor.mjs\")"
     ]
   }
 }
