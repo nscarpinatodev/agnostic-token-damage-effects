@@ -2,7 +2,7 @@
   "id": "agnostic-token-damage-effects",
   "title": "Agnostic Token Damage Effects",
   "description": "System-agnostic HP-based saturation, bleeding overlays, blood trails, and death blood pools for tokens. Requires Token Magic FX.",
-  "version": "1.40",
+  "version": "1.41",
   "compatibility": {
     "minimum": "13",
     "verified": "13.351"
@@ -19,5 +19,5 @@
     "styles/type-colors-config.css"
   ],
   "manifest": "https://raw.githubusercontent.com/nscarpinatodev/agnostic-token-damage-effects/main/module.json",
-  "download": "https://github.com/nscarpinatodev/agnostic-token-damage-effects/releases/download/v1.40/agnostic-token-damage-effects-v1.40.zip"
+  "download": "https://github.com/nscarpinatodev/agnostic-token-damage-effects/releases/download/v1.41/agnostic-token-damage-effects-v1.41.zip"
 }

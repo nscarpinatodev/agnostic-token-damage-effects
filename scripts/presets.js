@@ -86,6 +86,27 @@ export const HP_PRESETS = {
     resolver: actor => resolveByPaths(actor, "system.attributes.hp.value", "system.attributes.hp.max"),
     typeResolver: actor => foundry.utils.getProperty(actor, "system.details.type.value") ?? null
   },
+  fallout: {
+    label: "Fallout TTRPG",
+    changedPaths: ["system.health.value", "system.health.max"],
+    resolver: actor => resolveByPaths(actor, "system.health.value", "system.health.max"),
+    typeResolver: actor => {
+      // Actor type "robot" is always a construct
+      if (actor.type === "robot") return "construct";
+
+      const origin = foundry.utils.getProperty(actor, "system.origin");
+      if (origin && typeof origin === "string") {
+        const o = origin.toLowerCase();
+        if (o.includes("robot") || o.includes("synth") || o.includes("android")) return "construct";
+        if (o.includes("alien"))                                                   return "aberration";
+        if (o.includes("ghoul"))                                                   return "undead";
+        if (o.includes("mammal") || o.includes("animal") || o.includes("insect")) return "beast";
+        if (o.includes("plant"))                                                   return "plant";
+        // "Mutated Human", "Human", "Vault Dweller", "Super Mutant" etc. → humanoid
+      }
+      return "humanoid";
+    }
+  },
   custom: {
     label: "Custom",
     changedPaths: [],
