@@ -473,19 +473,29 @@ function _drawBloodSmear(g, angle) {
 
 function clampArmsToWalls(arms, cx, cy) {
   if (!canvas?.walls) return;
+
+  // Walls whose movement restriction is active and that aren't open doors
+  const blocking = canvas.walls.placeables.filter(w => {
+    if ((w.document.move ?? 0) === 0) return false;
+    if (w.document.door && w.isOpen) return false;
+    return true;
+  });
+  if (!blocking.length) return;
+
+  const origin = { x: cx, y: cy };
   for (const arm of arms) {
     if (arm.maxRadius < 2) continue;
-    const destX = cx + Math.cos(arm.angle) * arm.maxRadius;
-    const destY = cy + Math.sin(arm.angle) * arm.maxRadius;
-    const ray = new Ray({ x: cx, y: cy }, { x: destX, y: destY });
-    let hit;
-    try {
-      hit = canvas.walls.checkCollision(ray, { type: "move", mode: "closest" });
-    } catch (_) { continue; }
-    if (hit) {
-      const dist = Math.hypot(hit.x - cx, hit.y - cy);
-      arm.maxRadius = Math.max(0, dist - 2);
+    const dest = { x: cx + Math.cos(arm.angle) * arm.maxRadius, y: cy + Math.sin(arm.angle) * arm.maxRadius };
+    let minDist = arm.maxRadius;
+    for (const wall of blocking) {
+      const [x0, y0, x1, y1] = wall.coords;
+      const hit = foundry.utils.lineSegmentIntersection(origin, dest, { x: x0, y: y0 }, { x: x1, y: y1 });
+      if (hit && hit.t0 > 0.001 && hit.t0 <= 1 && hit.t1 >= 0 && hit.t1 <= 1) {
+        const dist = hit.t0 * arm.maxRadius;
+        if (dist < minDist) minDist = dist;
+      }
     }
+    arm.maxRadius = Math.max(0, minDist - 2);
   }
 }
 
@@ -519,9 +529,7 @@ export function ensureBloodPool(token, colorOverride = null) {
     });
   }
 
-  if (game.settings.get(MODULE_ID, "bloodPoolWallClip")) {
-    clampArmsToWalls(arms, token.center.x, token.center.y);
-  }
+  clampArmsToWalls(arms, token.center.x, token.center.y);
 
   g._hvArms          = arms;
   g._hvBaseRadius    = baseRadius;
