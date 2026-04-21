@@ -18,6 +18,7 @@
   "styles": [
     "styles/type-colors-config.css"
   ],
-  "manifest": "https://raw.githubusercontent.com/nscarpinatodev/agnostic-token-damage-effects/main/module.json",
+  "url": "https://github.com/nscarpinatodev/agnostic-token-damage-effects",
+  "manifest": "https://github.com/nscarpinatodev/agnostic-token-damage-effects/releases/latest/download/module.json",
   "download": "https://github.com/nscarpinatodev/agnostic-token-damage-effects/releases/download/v1.42/agnostic-token-damage-effects-v1.42.zip"
 }
