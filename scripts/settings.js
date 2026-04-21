@@ -62,6 +62,16 @@ export function registerSettings(refreshAllVisibleTokens) {
     onChange: () => refreshAllVisibleTokens()
   });
 
+  game.settings.register(MODULE_ID, "grayscaleOnDeath", {
+    name: "Grayscale Only on Death (No Tint)",
+    hint: "When enabled, tokens at 0 HP revert to pure grayscale instead of retaining the blood color tint.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: () => refreshAllVisibleTokens()
+  });
+
   game.settings.register(MODULE_ID, "useSteppedSaturation", {
     name: "Use 10% Desaturation Steps",
     hint: "Use 0.1 saturation steps per 10% HP instead of a smooth gradient.",

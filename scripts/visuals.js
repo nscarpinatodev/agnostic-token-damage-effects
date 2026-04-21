@@ -104,7 +104,10 @@ export async function applySaturation(token, state, tintColor = null, applyTint 
 
   let red = 1, green = 1, blue = 1;
 
-  if (applyTint && tintEnabled) {
+  const grayscaleOnDeath = game.settings.get(MODULE_ID, "grayscaleOnDeath");
+  const suppressTint = grayscaleOnDeath && state.isDead;
+
+  if (applyTint && tintEnabled && !suppressTint) {
     const damage = 1 - state.ratioRaw;
     const color  = tintColor ?? hexToNumber(game.settings.get(MODULE_ID, "bloodColor"));
 
