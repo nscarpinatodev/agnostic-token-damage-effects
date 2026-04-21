@@ -471,6 +471,24 @@ function _drawBloodSmear(g, angle) {
 // Death blood pool
 // ---------------------------------------------------------------------------
 
+function clampArmsToWalls(arms, cx, cy) {
+  if (!canvas?.walls) return;
+  for (const arm of arms) {
+    if (arm.maxRadius < 2) continue;
+    const destX = cx + Math.cos(arm.angle) * arm.maxRadius;
+    const destY = cy + Math.sin(arm.angle) * arm.maxRadius;
+    const ray = new Ray({ x: cx, y: cy }, { x: destX, y: destY });
+    let hit;
+    try {
+      hit = canvas.walls.checkCollision(ray, { type: "move", mode: "closest" });
+    } catch (_) { continue; }
+    if (hit) {
+      const dist = Math.hypot(hit.x - cx, hit.y - cy);
+      arm.maxRadius = Math.max(0, dist - 2);
+    }
+  }
+}
+
 export function ensureBloodPool(token, colorOverride = null) {
   if (!canvas?.ready) return;
   if (RUNTIME.bloodPools.has(token.id)) return;
@@ -499,6 +517,10 @@ export function ensureBloodPool(token, colorOverride = null) {
       maxRadius:     isSpike ? baseRadius * rand(1.4, 2.2) : baseRadius * rand(0.38, 1.05),
       startProgress: rand(0, 0.32)
     });
+  }
+
+  if (game.settings.get(MODULE_ID, "bloodPoolWallClip")) {
+    clampArmsToWalls(arms, token.center.x, token.center.y);
   }
 
   g._hvArms          = arms;

@@ -161,6 +161,15 @@ export function registerSettings(refreshAllVisibleTokens) {
     onChange: () => refreshAllVisibleTokens()
   });
 
+  game.settings.register(MODULE_ID, "bloodPoolWallClip", {
+    name: "Blood Pool Wall Clipping",
+    hint: "Prevent blood pools from spreading through walls.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.register(MODULE_ID, "bloodPoolLifetime", {
     name: "Blood Pool Lifetime (seconds)",
     hint: "How long the death pool remains before fading out.",
