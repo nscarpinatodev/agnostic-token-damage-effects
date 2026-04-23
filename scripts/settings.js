@@ -1,4 +1,5 @@
 import { MODULE_ID, HP_PRESETS } from "./presets.js";
+import { TypeColorsConfig } from "./type-colors-config.js";
 
 export function registerSettings(refreshAllVisibleTokens) {
   // ── HP Detection ─────────────────────────────────────────────────────────
@@ -186,6 +187,16 @@ export function registerSettings(refreshAllVisibleTokens) {
     type: Number,
     range: { min: 30, max: 1830, step: 30 },
     default: 180
+  });
+
+  // ── Blood Colors config dialog ────────────────────────────────────────────
+  game.settings.registerMenu(MODULE_ID, "creatureTypeColorsMenu", {
+    name: "Blood Colors by Creature Type",
+    label: "Configure",
+    hint: "Customize the global default blood color and per-type colors (undead, construct, elementals, and custom types).",
+    icon: "fas fa-tint",
+    type: TypeColorsConfig,
+    restricted: true
   });
 
   // ── Hidden / internal ─────────────────────────────────────────────────────
