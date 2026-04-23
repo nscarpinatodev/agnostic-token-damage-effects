@@ -23,8 +23,8 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", () => {
   if (!tokenMagicAvailable()) {
-    ui.notifications?.error("Agnostic Token Damage Effects requires Token Magic FX for desaturation. Enable Token Magic FX and reload.");
-    console.error("Agnostic Token Damage Effects | Token Magic FX is not active.");
+    ui.notifications?.warn("Agnostic Token Damage Effects: Token Magic FX is not active — desaturation and tint effects will be disabled.");
+    console.warn("Agnostic Token Damage Effects | Token Magic FX is not active. Desaturation and tint effects disabled.");
   }
   patchTmfxLogging();
 });
