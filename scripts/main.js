@@ -29,11 +29,16 @@ Hooks.once("ready", () => {
   patchTmfxLogging();
 });
 
-Hooks.on("renderSettingsConfig", (_app, html) => {
-  const root = html instanceof HTMLElement ? html : html?.[0];
-  if (!root) return;
+function injectSettingsUI(root) {
+  // Foundry V13 names inputs "module-id.key"; V12 used data-setting-id attributes.
+  // Try both, walking up to the nearest .form-group wrapper.
+  const getEl = key => {
+    return root.querySelector(`[name="${MODULE_ID}.${key}"]`)?.closest(".form-group")
+        ?? root.querySelector(`[data-setting-id="${MODULE_ID}.${key}"]`)
+        ?? null;
+  };
 
-  const getEl = key => root.querySelector(`[data-setting-id="${MODULE_ID}.${key}"]`);
+  if (!getEl("hpPreset")) return; // Our settings aren't in this root
 
   const mkHeader = label => {
     const h = document.createElement("h3");
@@ -42,16 +47,11 @@ Hooks.on("renderSettingsConfig", (_app, html) => {
     return h;
   };
 
-  // Section: HP Detection
   getEl("hpPreset")?.insertAdjacentElement("beforebegin", mkHeader("HP Detection"));
-
-  // Section: Token Coloration
   getEl("enableSaturation")?.insertAdjacentElement("beforebegin", mkHeader("Token Coloration"));
 
-  // Section: Blood Colors (button) + Blood Effects
   const bleedingEl = getEl("enableBleedingOverlay");
   if (bleedingEl) {
-    // Insert in reverse order so they stack correctly above bleedingEl
     bleedingEl.insertAdjacentElement("beforebegin", mkHeader("Blood Effects"));
 
     const btnRow = document.createElement("div");
@@ -59,24 +59,36 @@ Hooks.on("renderSettingsConfig", (_app, html) => {
     btnRow.innerHTML = `<label>Blood Colors by Creature Type</label><div class="form-fields"><button type="button"><i class="fas fa-tint"></i> Configure</button></div>`;
     btnRow.querySelector("button").addEventListener("click", () => new TypeColorsConfig().render(true));
     bleedingEl.previousElementSibling.insertAdjacentElement("beforebegin", btnRow);
-
     btnRow.insertAdjacentElement("beforebegin", mkHeader("Blood Colors"));
   }
 
-  // Section: Death Blood Pool
   getEl("enableBloodPool")?.insertAdjacentElement("beforebegin", mkHeader("Death Blood Pool"));
 
-  // Lifetime sliders: show "∞" at the sentinel max value
   for (const key of ["bloodPoolLifetime", "bloodTrailLifetime"]) {
     const el = getEl(key);
     if (!el) continue;
     const range = el.querySelector("input[type=range]");
-    const label = el.querySelector(".range-value") ?? el.querySelector("output") ?? el.querySelector("span:last-child");
-    if (!range || !label) continue;
-    const update = () => { label.textContent = Number(range.value) >= 1830 ? "∞" : range.value; };
+    const label = el.querySelector(".range-value, output, span.range-value");
+    if (!range) continue;
+    const update = () => {
+      if (label) label.textContent = Number(range.value) >= 1830 ? "∞" : range.value;
+    };
     range.addEventListener("input", update);
     update();
   }
+}
+
+Hooks.on("renderSettingsConfig", (_app, html) => {
+  // html may be an HTMLElement (V13) or a jQuery object (V12)
+  const fromHtml = html instanceof HTMLElement ? html : html?.[0];
+
+  // Try the passed element first; if our settings aren't in it, search the live document
+  // (V13 may pass only a partial element depending on how tabs are rendered)
+  const root = (fromHtml && fromHtml.querySelector(`[name="${MODULE_ID}.hpPreset"]`))
+    ? fromHtml
+    : document.querySelector("#client-settings, .settings-config") ?? document.body;
+
+  injectSettingsUI(root);
 });
 
 Hooks.on("canvasReady", () => {
