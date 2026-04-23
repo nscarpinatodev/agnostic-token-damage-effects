@@ -16,6 +16,95 @@
   cursor: pointer;
 }
 
+/* ── TypeColorsConfig dialog section headers ──────────────────────────── */
+.atde-dialog-header {
+  font-size: 0.8em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #c9a227;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.35);
+  margin: 12px 0 4px;
+  padding-bottom: 3px;
+}
+
+.atde-custom-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.atde-custom-header button {
+  font-size: 0.8em;
+  padding: 1px 6px;
+  height: 20px;
+  line-height: 1;
+  margin-left: auto;
+}
+
+.atde-custom-hint {
+  margin: 0 0 6px;
+  font-size: 0.8em;
+  opacity: 0.75;
+}
+
+.atde-custom-hint code {
+  font-family: monospace;
+  font-size: 0.95em;
+  opacity: 0.9;
+}
+
+/* ── Custom type rows ─────────────────────────────────────────────────── */
+.atde-custom-types {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.atde-custom-row {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.atde-custom-row-top,
+.atde-custom-row-paths {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+}
+
+.atde-custom-row-top input[type="text"] {
+  flex: 1;
+}
+
+.atde-custom-row-top input[type="color"] {
+  width: 40px;
+  height: 24px;
+  padding: 1px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.atde-custom-row-top .delete-custom-type {
+  padding: 2px 6px;
+  height: 24px;
+  line-height: 1;
+  flex: 0 0 auto;
+  color: #c44;
+}
+
+.atde-custom-row-paths input[type="text"] {
+  flex: 1;
+  font-size: 0.82em;
+}
+
 /* ── TypeColorsConfig dialog ──────────────────────────────────────────── */
 #atde-type-colors .window-content {
   padding: 8px 12px;

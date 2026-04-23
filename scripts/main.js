@@ -56,7 +56,10 @@ function injectSettingsUI(root) {
 
     const btnRow = document.createElement("div");
     btnRow.className = "form-group atde-config-button-row";
-    btnRow.innerHTML = `<label>Blood Colors by Creature Type</label><div class="form-fields"><button type="button"><i class="fas fa-tint"></i> Configure</button></div>`;
+    btnRow.innerHTML = `
+      <label>Blood Colors by Creature Type</label>
+      <div class="form-fields"><button type="button"><i class="fas fa-tint"></i> Configure</button></div>
+      <p class="hint">Customize the global default blood color and per-type colors (undead, construct, elementals, and custom types).</p>`;
     btnRow.querySelector("button").addEventListener("click", () => new TypeColorsConfig().render(true));
     bleedingEl.previousElementSibling.insertAdjacentElement("beforebegin", btnRow);
     btnRow.insertAdjacentElement("beforebegin", mkHeader("Blood Colors"));

@@ -16,7 +16,7 @@ export class TypeColorsConfig extends HandlebarsApplicationMixin(ApplicationV2) 
       icon: "fas fa-tint",
     },
     position: {
-      width: 460,
+      width: 520,
     },
   };
 
@@ -27,28 +27,42 @@ export class TypeColorsConfig extends HandlebarsApplicationMixin(ApplicationV2) 
   };
 
   async _prepareContext(_options) {
-    const saved = game.settings.get(MODULE_ID, "creatureTypeColors") ?? {};
+    const saved       = game.settings.get(MODULE_ID, "creatureTypeColors") ?? {};
+    const customTypes = game.settings.get(MODULE_ID, "customCreatureTypes") ?? [];
     return {
+      defaultBloodColor: game.settings.get(MODULE_ID, "bloodColor") ?? "#8b0000",
       types: Object.entries(CREATURE_TYPES).map(([key, cfg]) => ({
         key,
-        label: cfg.label,
-        suppress: cfg.suppress,
-        color: saved[key] ?? cfg.defaultColor ?? "#8b0000",
+        label:        cfg.label,
+        suppress:     cfg.suppress,
+        color:        saved[key] ?? cfg.defaultColor ?? "#8b0000",
         defaultColor: cfg.defaultColor ?? "#8b0000",
+      })),
+      customTypes: customTypes.map(ct => ({
+        label:       ct.label       ?? "",
+        color:       ct.color       ?? "#8b0000",
+        matchPath:   ct.matchPath   ?? "",
+        matchValues: ct.matchValues ?? "",
       })),
     };
   }
 
   _onRender(_context, _options) {
+    // Reset individual built-in type colors
     for (const btn of this.element.querySelectorAll(".reset-type-color")) {
       btn.addEventListener("click", ev => {
-        const { key } = ev.currentTarget.dataset;
-        const defaultColor = ev.currentTarget.dataset.default;
-        const input = this.element.querySelector(`input[name="color_${key}"]`);
-        if (input) input.value = defaultColor || "#8b0000";
+        const input = this.element.querySelector(`input[name="color_${ev.currentTarget.dataset.key}"]`);
+        if (input) input.value = ev.currentTarget.dataset.default || "#8b0000";
       });
     }
 
+    // Reset default blood color
+    this.element.querySelector(".reset-default-color")?.addEventListener("click", ev => {
+      const input = this.element.querySelector(`input[name="defaultBloodColor"]`);
+      if (input) input.value = ev.currentTarget.dataset.default ?? "#8b0000";
+    });
+
+    // Reset all built-in colors (does not touch default or custom types)
     this.element.querySelector(".reset-all-colors")?.addEventListener("click", () => {
       for (const [key, cfg] of Object.entries(CREATURE_TYPES)) {
         if (cfg.suppress) continue;
@@ -56,10 +70,47 @@ export class TypeColorsConfig extends HandlebarsApplicationMixin(ApplicationV2) 
         if (input) input.value = cfg.defaultColor ?? "#8b0000";
       }
     });
+
+    // Custom type rows
+    let nextIdx = this.element.querySelectorAll(".atde-custom-row").length;
+
+    const bindDeleteButtons = () => {
+      for (const btn of this.element.querySelectorAll(".delete-custom-type")) {
+        btn.onclick = () => btn.closest(".atde-custom-row").remove();
+      }
+    };
+    bindDeleteButtons();
+
+    this.element.querySelector(".add-custom-type")?.addEventListener("click", () => {
+      const idx = nextIdx++;
+      const row = document.createElement("div");
+      row.className = "atde-custom-row";
+      row.innerHTML = `
+        <div class="atde-custom-row-top">
+          <input type="text" name="custom_label_${idx}" placeholder="Name">
+          <input type="color" name="custom_color_${idx}" value="#8b0000">
+          <button type="button" class="delete-custom-type" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+        <div class="atde-custom-row-paths">
+          <input type="text" name="custom_matchPath_${idx}" placeholder="Data path (e.g. system.traits.value)">
+          <input type="text" name="custom_matchValues_${idx}" placeholder="Match values, comma-separated">
+        </div>`;
+      this.element.querySelector(".atde-custom-types").appendChild(row);
+      bindDeleteButtons();
+    });
   }
 
   static async #onSubmit(_event, _form, formData) {
     const data = formData.object;
+
+    // Global default blood color
+    if (data.defaultBloodColor) {
+      await game.settings.set(MODULE_ID, "bloodColor", data.defaultBloodColor);
+    }
+
+    // Per-type colors
     const colors = {};
     for (const [key, cfg] of Object.entries(CREATURE_TYPES)) {
       if (cfg.suppress) continue;
@@ -67,5 +118,23 @@ export class TypeColorsConfig extends HandlebarsApplicationMixin(ApplicationV2) 
       if (val) colors[key] = val;
     }
     await game.settings.set(MODULE_ID, "creatureTypeColors", colors);
+
+    // Custom types — collect all indexed rows regardless of gaps from deletions
+    const customTypes = [];
+    for (const [key, val] of Object.entries(data)) {
+      const m = key.match(/^custom_label_(\d+)$/);
+      if (!m) continue;
+      const idx   = m[1];
+      const label = String(val ?? "").trim();
+      const path  = String(data[`custom_matchPath_${idx}`] ?? "").trim();
+      if (!label || !path) continue;
+      customTypes.push({
+        label,
+        color:       data[`custom_color_${idx}`]       ?? "#8b0000",
+        matchPath:   path,
+        matchValues: String(data[`custom_matchValues_${idx}`] ?? "").trim(),
+      });
+    }
+    await game.settings.set(MODULE_ID, "customCreatureTypes", customTypes);
   }
 }

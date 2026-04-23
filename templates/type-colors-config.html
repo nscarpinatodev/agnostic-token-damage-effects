@@ -1,9 +1,23 @@
 <div class="atde-type-colors">
   <p class="notes">
-    Set a custom blood color for each creature type. Leaving a type at its default uses
-    the built-in color, or the global blood color if none is defined.
+    Configure the global default blood color, per-type colors, and custom creature type rules.
+    Custom types are matched before built-in types.
   </p>
 
+  {{!-- Global default color --}}
+  <h3 class="atde-dialog-header">Global Default</h3>
+  <div class="form-group">
+    <label>Default Blood Color</label>
+    <div class="form-fields">
+      <input type="color" name="defaultBloodColor" value="{{defaultBloodColor}}">
+      <button type="button" class="reset-default-color" data-default="#8b0000" title="Reset to default">
+        <i class="fas fa-undo"></i>
+      </button>
+    </div>
+  </div>
+
+  {{!-- Built-in types --}}
+  <h3 class="atde-dialog-header">Built-in Types</h3>
   {{#each types}}
   <div class="form-group">
     <label>{{label}}</label>
@@ -23,9 +37,42 @@
   </div>
   {{/each}}
 
+  {{!-- Custom types --}}
+  <h3 class="atde-dialog-header atde-custom-header">
+    Custom Types
+    <button type="button" class="add-custom-type" title="Add custom type">
+      <i class="fas fa-plus"></i> Add
+    </button>
+  </h3>
+  <p class="notes atde-custom-hint">
+    Match against any actor data path. <em>Data path</em> is a dot-notation property
+    (e.g. <code>system.traits.value</code>). <em>Match values</em> is a comma-separated
+    list — any substring match triggers the type.
+  </p>
+
+  <div class="atde-custom-types">
+    {{#each customTypes}}
+    <div class="atde-custom-row">
+      <div class="atde-custom-row-top">
+        <input type="text" name="custom_label_{{@index}}" value="{{label}}" placeholder="Name">
+        <input type="color" name="custom_color_{{@index}}" value="{{color}}">
+        <button type="button" class="delete-custom-type" title="Delete">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+      <div class="atde-custom-row-paths">
+        <input type="text" name="custom_matchPath_{{@index}}" value="{{matchPath}}"
+               placeholder="Data path (e.g. system.traits.value)">
+        <input type="text" name="custom_matchValues_{{@index}}" value="{{matchValues}}"
+               placeholder="Match values, comma-separated">
+      </div>
+    </div>
+    {{/each}}
+  </div>
+
   <footer class="sheet-footer flexrow">
     <button type="button" class="reset-all-colors">
-      <i class="fas fa-undo"></i> Reset All
+      <i class="fas fa-undo"></i> Reset Built-in Colors
     </button>
     <button type="submit">
       <i class="fas fa-save"></i> Save
