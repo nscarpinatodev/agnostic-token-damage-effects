@@ -159,7 +159,7 @@ export function registerSettings(refreshAllVisibleTokens) {
 
   game.settings.register(MODULE_ID, "bloodTrailLifetime", {
     name: "Blood Trail Lifetime",
-    hint: "How long blood trail marks remain before fading (30s – 30min in 30s steps). The final position keeps marks permanently.",
+    hint: "How long blood trail marks remain before fading (30s – 30min in 30s steps). Slide all the way right for infinite — marks never fade.",
     scope: "world",
     config: true,
     type: Number,
@@ -180,7 +180,7 @@ export function registerSettings(refreshAllVisibleTokens) {
 
   game.settings.register(MODULE_ID, "bloodPoolLifetime", {
     name: "Blood Pool Lifetime",
-    hint: "How long the death pool remains before fading (30s – 30min in 30s steps). The final position keeps pools permanently.",
+    hint: "How long the death pool remains before fading (30s – 30min in 30s steps). Slide all the way right for infinite — pools never fade.",
     scope: "world",
     config: true,
     type: Number,

@@ -68,10 +68,15 @@ function injectSettingsUI(root) {
     const el = getEl(key);
     if (!el) continue;
     const range = el.querySelector("input[type=range]");
-    const label = el.querySelector(".range-value, output, span.range-value");
     if (!range) continue;
+    // Foundry renders the range value in a sibling span/output; try several selectors
+    const label = el.querySelector(".range-value")
+               ?? el.querySelector("output")
+               ?? [...el.querySelectorAll("span")].find(s => /^\d+$/.test(s.textContent.trim()));
     const update = () => {
-      if (label) label.textContent = Number(range.value) >= 1830 ? "∞" : range.value;
+      const isInfinite = Number(range.value) >= 1830;
+      if (label) label.textContent = isInfinite ? "∞" : range.value;
+      range.title = isInfinite ? "Infinite" : `${range.value}s`;
     };
     range.addEventListener("input", update);
     update();
