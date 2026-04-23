@@ -3,6 +3,7 @@ import { registerSettings } from "./settings.js";
 import { hpRelevantChange, getActorHp } from "./hp-resolver.js";
 import { computeState, applyAlpha, applySaturation, clearVisualFilter, patchTmfxLogging } from "./visuals.js";
 import { getBloodColorForActor } from "./creature-types.js";
+import { TypeColorsConfig } from "./type-colors-config.js";
 import {
   ensureBleedingOverlay,
   removeBleedingOverlay,
@@ -25,8 +26,57 @@ Hooks.once("ready", () => {
     ui.notifications?.error("Agnostic Token Damage Effects requires Token Magic FX for desaturation. Enable Token Magic FX and reload.");
     console.error("Agnostic Token Damage Effects | Token Magic FX is not active.");
   }
-  // Patch TMFX to log all calls with stack traces so we can diagnose permission errors.
   patchTmfxLogging();
+});
+
+Hooks.on("renderSettingsConfig", (_app, html) => {
+  const root = html instanceof HTMLElement ? html : html?.[0];
+  if (!root) return;
+
+  const getEl = key => root.querySelector(`[data-setting-id="${MODULE_ID}.${key}"]`);
+
+  const mkHeader = label => {
+    const h = document.createElement("h3");
+    h.className = "atde-settings-header";
+    h.textContent = label;
+    return h;
+  };
+
+  // Section: HP Detection
+  getEl("hpPreset")?.insertAdjacentElement("beforebegin", mkHeader("HP Detection"));
+
+  // Section: Token Coloration
+  getEl("enableSaturation")?.insertAdjacentElement("beforebegin", mkHeader("Token Coloration"));
+
+  // Section: Blood Colors (button) + Blood Effects
+  const bleedingEl = getEl("enableBleedingOverlay");
+  if (bleedingEl) {
+    // Insert in reverse order so they stack correctly above bleedingEl
+    bleedingEl.insertAdjacentElement("beforebegin", mkHeader("Blood Effects"));
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "form-group atde-config-button-row";
+    btnRow.innerHTML = `<label>Blood Colors by Creature Type</label><div class="form-fields"><button type="button"><i class="fas fa-tint"></i> Configure</button></div>`;
+    btnRow.querySelector("button").addEventListener("click", () => new TypeColorsConfig().render(true));
+    bleedingEl.previousElementSibling.insertAdjacentElement("beforebegin", btnRow);
+
+    btnRow.insertAdjacentElement("beforebegin", mkHeader("Blood Colors"));
+  }
+
+  // Section: Death Blood Pool
+  getEl("enableBloodPool")?.insertAdjacentElement("beforebegin", mkHeader("Death Blood Pool"));
+
+  // Lifetime sliders: show "∞" at the sentinel max value
+  for (const key of ["bloodPoolLifetime", "bloodTrailLifetime"]) {
+    const el = getEl(key);
+    if (!el) continue;
+    const range = el.querySelector("input[type=range]");
+    const label = el.querySelector(".range-value") ?? el.querySelector("output") ?? el.querySelector("span:last-child");
+    if (!range || !label) continue;
+    const update = () => { label.textContent = Number(range.value) >= 1830 ? "∞" : range.value; };
+    range.addEventListener("input", update);
+    update();
+  }
 });
 
 Hooks.on("canvasReady", () => {

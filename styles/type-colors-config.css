@@ -1,3 +1,22 @@
+/* ── Module settings section headers ──────────────────────────────────── */
+.atde-settings-header {
+  font-size: 0.85em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #c9a227;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.35);
+  margin: 14px 0 2px;
+  padding-bottom: 3px;
+}
+
+.atde-config-button-row button {
+  padding: 2px 10px;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+/* ── TypeColorsConfig dialog ──────────────────────────────────────────── */
 #atde-type-colors .window-content {
   padding: 8px 12px;
 }

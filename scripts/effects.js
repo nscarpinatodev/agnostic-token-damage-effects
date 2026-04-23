@@ -276,8 +276,9 @@ function createBloodTrailMark(token, oldX, oldY, colorOverride = null) {
   drawBloodTrailMark(g);
   layer.addChildAt(g, 0);
 
-  const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
-  const fadeTimeout = setTimeout(() => fadeOutBloodTrailMark(token.id, g, 1200), lifetime);
+  const lifetimeSec = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 180);
+  const infinite = lifetimeSec >= 1830;
+  const fadeTimeout = infinite ? null : setTimeout(() => fadeOutBloodTrailMark(token.id, g, 1200), lifetimeSec * 1000);
 
   let set = RUNTIME.bloodTrails.get(token.id);
   if (!set) {
@@ -387,7 +388,8 @@ export function dropPathTrail(tokenDoc, waypoints, colorOverride) {
   const halfH    = token.h / 2;
   const gridSize = canvas.grid?.size ?? 100;
   const spacing  = Number(game.settings.get(MODULE_ID, "bloodTrailSpacing") ?? 35);
-  const lifetime = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 20) * 1000;
+  const lifetimeSecPT = Number(game.settings.get(MODULE_ID, "bloodTrailLifetime") ?? 180);
+  const lifetime = lifetimeSecPT >= 1830 ? null : lifetimeSecPT * 1000;
 
   // Walk each consecutive pair of waypoints as a segment.
   for (let i = 0; i < waypoints.length - 1; i++) {
@@ -432,7 +434,7 @@ function _placePathMark(layer, x, y, angle, colorOverride, tokenDoc, lifetime) {
 
   layer.addChildAt(g, 0);
 
-  const fadeTimeout = setTimeout(() => fadeOutBloodTrailMark(tokenDoc.id, g, 1200), lifetime);
+  const fadeTimeout = lifetime != null ? setTimeout(() => fadeOutBloodTrailMark(tokenDoc.id, g, 1200), lifetime) : null;
 
   let set = RUNTIME.bloodTrails.get(tokenDoc.id);
   if (!set) { set = new Set(); RUNTIME.bloodTrails.set(tokenDoc.id, set); }
@@ -551,10 +553,12 @@ export function ensureBloodPool(token, colorOverride = null) {
     if (entry.graphic._hvProgress >= 1.0) {
       PIXI.Ticker.shared.remove(growTicker);
       entry.growTicker = null;
-      // Start darkening + fade-out only once the pool has fully spread
-      const lifetime = Number(game.settings.get(MODULE_ID, "bloodPoolLifetime") ?? 30) * 1000;
-      startBloodPoolDarkening(token.id, lifetime);
-      entry.timeout = setTimeout(() => fadeOutBloodPool(token.id, 2000), lifetime);
+      // Start darkening + optional fade-out once the pool has fully spread
+      const lifetimeSec = Number(game.settings.get(MODULE_ID, "bloodPoolLifetime") ?? 180);
+      const infinite = lifetimeSec >= 1830;
+      const lifetimeMs = lifetimeSec * 1000;
+      startBloodPoolDarkening(token.id, infinite ? 120_000 : lifetimeMs);
+      if (!infinite) entry.timeout = setTimeout(() => fadeOutBloodPool(token.id, 2000), lifetimeMs);
     }
   };
 
