@@ -129,6 +129,21 @@ export function getSelectedPreset() {
   return HP_PRESETS[presetKey] ?? HP_PRESETS.custom;
 }
 
+// Foundry system ids that differ from the preset key they map to.
+const SYSTEM_ALIASES = {
+  pf1: "pf1e",              // Pathfinder 1e
+  "black-flag": "blackflag" // Tales of the Valiant / Black Flag
+};
+
+// Resolves a Foundry system id to a matching HP preset key, or null if none.
+// Direct id→key matches are used automatically, so systems whose id equals the
+// preset key (dnd5e, pf2e, dcc, shadowdark, deltagreen, …) work without listing.
+export function presetForSystem(systemId) {
+  if (!systemId) return null;
+  if (HP_PRESETS[systemId]) return systemId;
+  return SYSTEM_ALIASES[systemId] ?? null;
+}
+
 export function tokenMagicAvailable() {
   return game.modules.get("tokenmagic")?.active && typeof globalThis.TokenMagic !== "undefined";
 }

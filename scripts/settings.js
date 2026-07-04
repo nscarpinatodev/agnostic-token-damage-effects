@@ -275,6 +275,15 @@ export function registerSettings(refreshAllVisibleTokens) {
     default: {}
   });
 
+  // Tracks the system id we last auto-applied an HP preset for, so we do it once
+  // per world and don't repeatedly override the GM's choice.
+  game.settings.register(MODULE_ID, "autoConfiguredSystem", {
+    scope: "world",
+    config: false,
+    type: String,
+    default: ""
+  });
+
   game.settings.register(MODULE_ID, "customCreatureTypes", {
     scope: "world",
     config: false,

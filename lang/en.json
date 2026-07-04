@@ -76,6 +76,7 @@
 
   "ATDE.notify.noTmfx": "Scorpious187's Agnostic Token Damage Effects: Token Magic FX is not active — using the built-in colour fallback. Install Token Magic FX for higher-quality desaturation.",
   "ATDE.notify.clearedBlood": "Cleared persisted blood on the current scene.",
+  "ATDE.notify.autoConfigured": "Auto-configured the HP preset for this system: {preset}.",
 
   "ATDE.tokenConfig.legend": "Damage Effects (ATDE)",
   "ATDE.tokenConfig.disableLabel": "Disable Effects",

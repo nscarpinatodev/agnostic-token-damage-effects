@@ -1,4 +1,4 @@
-import { MODULE_ID, tokenMagicAvailable } from "./presets.js";
+import { MODULE_ID, HP_PRESETS, tokenMagicAvailable, presetForSystem } from "./presets.js";
 import { registerSettings } from "./settings.js";
 import { hpRelevantChange, getActorHp } from "./hp-resolver.js";
 import { computeState, applyAlpha, applySaturation, clearVisualFilter, patchTmfxLogging } from "./visuals.js";
@@ -61,7 +61,36 @@ Hooks.once("ready", () => {
   const mod = game.modules.get(MODULE_ID);
   if (mod) mod.api = { clearBlood: clearSceneDecals };
   startSweep();
+
+  maybeAutoConfigurePreset();
 });
+
+// Auto-select the HP preset that matches the world's game system, once per
+// world. Won't override a preset the GM deliberately changed from the default.
+async function maybeAutoConfigurePreset() {
+  if (!game.user.isGM) return;
+
+  const sysId = game.system?.id;
+  const preset = presetForSystem(sysId);
+  if (!preset) return; // no matching preset — leave the GM to configure manually
+
+  if (game.settings.get(MODULE_ID, "autoConfiguredSystem") === sysId) return; // already done
+
+  const current = game.settings.get(MODULE_ID, "hpPreset");
+  const defaultPreset = game.settings.settings.get(`${MODULE_ID}.hpPreset`)?.default ?? "dnd5e";
+
+  // First time in this world we only apply when the preset is still untouched
+  // (the default), so a deliberate manual choice is never clobbered. If the
+  // world's system changed since a previous auto-config, re-apply.
+  const previouslyAuto = !!game.settings.get(MODULE_ID, "autoConfiguredSystem");
+  const mayApply = previouslyAuto || current === defaultPreset;
+
+  if (mayApply && current !== preset) {
+    await game.settings.set(MODULE_ID, "hpPreset", preset);
+    ui.notifications?.info(game.i18n.format("ATDE.notify.autoConfigured", { preset: HP_PRESETS[preset].label }));
+  }
+  await game.settings.set(MODULE_ID, "autoConfiguredSystem", sysId);
+}
 
 function injectSettingsUI(root) {
   // Foundry V13 names inputs "module-id.key"; V12 used data-setting-id attributes.
