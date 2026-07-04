@@ -10,6 +10,7 @@ import {
   ensureBloodPool,
   removeBloodPool,
   clearRuntimeEffects,
+  clearAllRuntimeBlood,
   maybeDropBloodTrail,
   dropPathTrail,
   dropDamageSplatter,
@@ -259,7 +260,10 @@ Hooks.on("canvasReady", () => {
 // React to persisted-decal changes from any client (clear-all, revive, prune).
 Hooks.on("updateScene", (scene, change) => {
   if (scene.id !== canvas?.scene?.id) return;
-  if (foundry.utils.hasProperty(change, `flags.${MODULE_ID}`)) onRecordsChanged();
+  if (!foundry.utils.hasProperty(change, `flags.${MODULE_ID}`)) return;
+  onRecordsChanged();
+  // A clear-all also wipes each client's live runtime blood (pools/trails/splatter).
+  if (foundry.utils.hasProperty(change, `flags.${MODULE_ID}.clearNonce`)) clearAllRuntimeBlood();
 });
 
 Hooks.on("createToken", tokenDoc => {

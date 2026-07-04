@@ -259,6 +259,15 @@ export function clearRuntimeEffects(tokenId) {
   clearBloodTrails(tokenId);
 }
 
+// Wipes all live ground blood (death pools, trails, and damage splatter) for
+// the current scene on this client. Leaves the on-token bleeding overlays,
+// which reflect current HP and would just reappear. Used by "Clear Scene Blood"
+// so freshly-created runtime marks are removed too, not just persisted decals.
+export function clearAllRuntimeBlood() {
+  for (const id of [...RUNTIME.bloodPools.keys()]) removeBloodPool(id);
+  for (const id of [...RUNTIME.bloodTrails.keys()]) clearBloodTrails(id);
+}
+
 // ---------------------------------------------------------------------------
 // Blood trails — sparse marks (existing system)
 // ---------------------------------------------------------------------------

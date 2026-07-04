@@ -85,12 +85,17 @@ export async function removePoolDecalForToken(tokenId) {
   if (next.length !== all.length) await scene.setFlag(MODULE_ID, FLAG, next);
 }
 
-// GM-only: remove all decals on the active scene.
+// GM-only: remove all decals on the active scene. Empties the persisted records
+// and bumps a clear nonce so every client also wipes its live runtime blood —
+// even when persistence is off and the records flag is already empty.
 export async function clearSceneDecals() {
   if (!game.user?.isGM) return;
   const scene = currentScene();
   if (!scene) return;
-  await scene.unsetFlag(MODULE_ID, FLAG);
+  await scene.update({
+    [`flags.${MODULE_ID}.${FLAG}`]: [],
+    [`flags.${MODULE_ID}.clearNonce`]: Date.now()
+  });
 }
 
 // Full (re)draw of all live records. Called on canvasReady — the tokens layer
