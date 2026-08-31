@@ -9,7 +9,8 @@
   },
   "authors": [
     {
-      "name": "Nick"
+      "name": "Nick",
+      "url": "https://github.com/nscarpinatodev"
     }
   ],
   "esmodules": [
@@ -30,7 +31,19 @@
       {
         "id": "tokenmagic",
         "type": "module",
-        "compatibility": { "minimum": "4" }
+        "compatibility": {
+          "minimum": "4"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "id": "scorpious187s-lib",
+        "type": "module",
+        "manifest": "https://github.com/nscarpinatodev/scorpious187s-lib/releases/latest/download/module.json",
+        "compatibility": {
+          "minimum": "0.3.0"
+        }
       }
     ]
   },
